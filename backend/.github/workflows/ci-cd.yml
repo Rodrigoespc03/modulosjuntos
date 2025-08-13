@@ -1,0 +1,303 @@
+# 🚀 GITHUB ACTIONS CI/CD - SISTEMA PROCURA
+# Pipeline completo de testing, building y deployment
+
+name: 🚀 Sistema Procura CI/CD Pipeline
+
+# ========================================
+# TRIGGERS
+# ========================================
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
+
+# ========================================
+# ENVIRONMENT VARIABLES
+# ========================================
+env:
+  NODE_VERSION: '18'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/procura-backend
+
+# ========================================
+# JOBS
+# ========================================
+jobs:
+  # ========================================
+  # JOB 1: LINTING Y VALIDACIÓN
+  # ========================================
+  lint-and-validate:
+    name: 🔍 Linting & Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 📦 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+        
+    - name: 📋 Install dependencies
+      run: |
+        cd backend
+        npm ci
+        
+    - name: 🔍 Run ESLint
+      run: |
+        cd backend
+        npm run lint
+        
+    - name: ✅ Run TypeScript check
+      run: |
+        cd backend
+        npx tsc --noEmit
+        
+    - name: 📋 Validate Prisma schema
+      run: |
+        cd backend
+        npx prisma validate
+        
+    - name: 🔒 Security audit
+      run: |
+        cd backend
+        npm audit --audit-level=moderate
+
+  # ========================================
+  # JOB 2: TESTING
+  # ========================================
+  test:
+    name: 🧪 Testing
+    runs-on: ubuntu-latest
+    needs: lint-and-validate
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: procura_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+          
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 📦 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+        
+    - name: 📋 Install dependencies
+      run: |
+        cd backend
+        npm ci
+        
+    - name: 🔧 Setup test database
+      run: |
+        cd backend
+        npx prisma migrate deploy
+        npx prisma db seed
+        
+    - name: 🧪 Run unit tests
+      run: |
+        cd backend
+        npm run test:unit
+        
+    - name: 🧪 Run integration tests
+      run: |
+        cd backend
+        npm run test:integration
+        
+    - name: 🧪 Run performance tests
+      run: |
+        cd backend
+        npm run test:performance
+        
+    - name: 📊 Upload coverage
+      uses: codecov/codecov-action@v3
+      with:
+        file: backend/coverage/lcov.info
+        flags: backend
+        name: backend-coverage
+
+  # ========================================
+  # JOB 3: BUILD DOCKER IMAGE
+  # ========================================
+  build:
+    name: 🐳 Build Docker Image
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 🔐 Login to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: 🏷️ Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=sha,prefix={{branch}}-
+          
+    - name: 🐳 Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./backend
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        platforms: linux/amd64,linux/arm64
+
+  # ========================================
+  # JOB 4: DEPLOY TO STAGING
+  # ========================================
+  deploy-staging:
+    name: 🚀 Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/develop' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging')
+    environment: staging
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 🔐 Setup SSH
+      uses: webfactory/ssh-agent@v0.8.0
+      with:
+        ssh-private-key: ${{ secrets.STAGING_SSH_KEY }}
+        
+    - name: 🚀 Deploy to staging server
+      run: |
+        ssh ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }} << 'EOF'
+          cd /opt/procura
+          docker-compose pull
+          docker-compose up -d
+          docker system prune -f
+        EOF
+        
+    - name: ✅ Health check
+      run: |
+        sleep 30
+        curl -f ${{ secrets.STAGING_URL }}/api/health || exit 1
+
+  # ========================================
+  # JOB 5: DEPLOY TO PRODUCTION
+  # ========================================
+  deploy-production:
+    name: 🚀 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
+    environment: production
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 🔐 Setup SSH
+      uses: webfactory/ssh-agent@v0.8.0
+      with:
+        ssh-private-key: ${{ secrets.PRODUCTION_SSH_KEY }}
+        
+    - name: 🚀 Deploy to production server
+      run: |
+        ssh ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} << 'EOF'
+          cd /opt/procura
+          docker-compose pull
+          docker-compose up -d
+          docker system prune -f
+        EOF
+        
+    - name: ✅ Health check
+      run: |
+        sleep 30
+        curl -f ${{ secrets.PRODUCTION_URL }}/api/health || exit 1
+        
+    - name: 📊 Notify deployment
+      uses: 8398a7/action-slack@v3
+      with:
+        status: success
+        text: '🚀 Sistema Procura deployed to production successfully!'
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # ========================================
+  # JOB 6: SECURITY SCAN
+  # ========================================
+  security-scan:
+    name: 🔒 Security Scan
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 🔒 Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        
+    - name: 📊 Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+
+

@@ -128,10 +128,10 @@ export default function PacienteSearch({
                 {paciente.nombre} {paciente.apellido}
               </div>
               {paciente.email && (
-                <div className="text-sm text-gray-600">{paciente.email}</div>
+                <div className="text-sm text-black">{paciente.email}</div>
               )}
               {paciente.telefono && (
-                <div className="text-sm text-gray-500">{paciente.telefono}</div>
+                <div className="text-sm text-black">{paciente.telefono}</div>
               )}
             </div>
           ))}

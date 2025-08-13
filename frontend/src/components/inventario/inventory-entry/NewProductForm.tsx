@@ -1,7 +1,16 @@
 "use client";
 
 import React, { useState } from 'react';
-import { ProductType, ProductUnit } from '@prisma/client';
+// Definir los tipos localmente ya que no están disponibles en @prisma/client
+enum ProductType {
+  SIMPLE = 'SIMPLE',
+  COMPLEX = 'COMPLEX'
+}
+
+enum ProductUnit {
+  ML = 'ML',
+  PIECE = 'PIECE'
+}
 
 interface NewProductFormProps {
   onProductCreated: (product: { id: string; name: string }) => void;

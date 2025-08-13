@@ -82,7 +82,7 @@ function ItemsList({ fields, remove }: { fields: any[]; remove: (index: number) 
 const renderDetailForm = (tipo: TipoTratamiento | undefined, append: any, fields: any[]) => {
   switch (tipo) {
     case TipoTratamiento.INMUNOTERAPIA:
-      return <InmunoterapiaForm append={append} fields={fields} />
+      return <InmunoterapiaForm />
     case TipoTratamiento.PRUEBAS:
       return <PruebasForm append={append} fields={fields} />
     case TipoTratamiento.CONSULTA:

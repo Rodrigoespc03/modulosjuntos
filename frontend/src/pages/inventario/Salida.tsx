@@ -62,7 +62,7 @@ export default function InventoryExitPage() {
       {/* Resumen de salidas por categoría */}
       <div className="mb-8">
         <h2 className="text-3xl font-bold text-gray-800 mb-4">Detalle de Inventario Utilizado por Categoría</h2>
-        {loading && <div className="text-gray-500">Cargando...</div>}
+        {loading && <div className="text-black">Cargando...</div>}
         {error && <div className="text-red-500">{error}</div>}
         {!loading && !error && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -70,7 +70,7 @@ export default function InventoryExitPage() {
               <Card key={cat.category} className="p-6 bg-gray-50 rounded-xl border border-gray-200">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-bold text-2xl text-gray-900">{cat.category}</h3>
-                  <span className="text-lg text-gray-500">{cat.totalQuantity} salidas</span>
+                  <span className="text-lg text-black">{cat.totalQuantity} salidas</span>
                 </div>
                 <div className="text-2xl font-bold text-blue-700 mb-2">
                   {cat.totalValue.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}
@@ -104,7 +104,7 @@ export default function InventoryExitPage() {
             <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
               <div className="mb-6">
                 <h2 className="text-xl font-semibold text-gray-900 mb-2">Información de la Salida</h2>
-                <p className="text-gray-600">Completa los datos del paciente y tratamiento</p>
+                <p className="text-black">Completa los datos del paciente y tratamiento</p>
               </div>
               <InventoryExitForm />
             </div>

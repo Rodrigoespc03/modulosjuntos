@@ -1,100 +1,87 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import asyncHandler from '../utils/asyncHandler';
+import { 
+  createPrecioConsultorioSchema,
+  updatePrecioConsultorioSchema,
+  precioConsultorioIdSchema
+} from '../schemas/validationSchemas';
+import { validateBody, validateParams, getValidatedBody, getValidatedParams } from '../middleware/validation';
+import { createNotFoundError } from '../middleware/errorHandler';
 
 const prisma = new PrismaClient();
 
-export const getAllPreciosConsultorio = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const precios = await prisma.precioConsultorio.findMany();
-        res.json(precios);
-    } catch (error) {
-        console.error('Error getting all precios consultorio:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
-    }
-};
+export const getAllPreciosConsultorio = asyncHandler(async (req: Request, res: Response) => {
+    const precios = await prisma.precioConsultorio.findMany();
+    res.json(precios);
+});
 
-export const getPrecioConsultorioById = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { id } = req.params;
+export const getPrecioConsultorioById = [
+    validateParams(precioConsultorioIdSchema),
+    asyncHandler(async (req: Request, res: Response) => {
+        const { id } = getValidatedParams(req);
+        
         const precio = await prisma.precioConsultorio.findUnique({ 
             where: { id } 
         });
         
         if (!precio) {
-            res.status(404).json({ error: 'PrecioConsultorio no encontrado' });
-            return;
+            throw createNotFoundError('PrecioConsultorio no encontrado');
         }
         
         res.json(precio);
-    } catch (error) {
-        console.error('Error getting precio consultorio by id:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
-    }
-};
+    })
+];
 
-export const createPrecioConsultorio = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { consultorio_id, concepto, precio } = req.body;
-        if (!consultorio_id || !concepto || precio === undefined) {
-            res.status(400).json({ error: 'Faltan campos requeridos' });
-            return;
-        }
-        const precioValue = parseFloat(precio);
-        if (isNaN(precioValue)) {
-            res.status(400).json({ error: 'El campo precio debe ser un número válido' });
-            return;
-        }
+export const createPrecioConsultorio = [
+    validateBody(createPrecioConsultorioSchema),
+    asyncHandler(async (req: Request, res: Response) => {
+        const { consultorio_id, concepto, precio } = getValidatedBody(req);
+        
         const nuevoPrecio = await prisma.precioConsultorio.create({
             data: {
                 consultorio_id,
                 concepto,
-                precio: precioValue,
+                precio,
             },
         });
+        
         res.status(200).json(nuevoPrecio);
-    } catch (error) {
-        console.error('Error creating precio consultorio:', error);
-        res.status(400).json({ error: error instanceof Error ? error.message : 'Error al crear precio consultorio' });
-    }
-};
+    })
+];
 
-export const updatePrecioConsultorio = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { id } = req.params;
-        const { consultorio_id, concepto, precio } = req.body;
+export const updatePrecioConsultorio = [
+    validateParams(precioConsultorioIdSchema),
+    validateBody(updatePrecioConsultorioSchema),
+    asyncHandler(async (req: Request, res: Response) => {
+        const { id } = getValidatedParams(req);
+        const { consultorio_id, concepto, precio } = getValidatedBody(req);
+        
         const data: any = {};
         if (consultorio_id !== undefined) data.consultorio_id = consultorio_id;
         if (concepto !== undefined) data.concepto = concepto;
-        if (precio !== undefined) {
-            const precioValue = parseFloat(precio);
-            if (isNaN(precioValue)) {
-                res.status(400).json({ error: 'El campo precio debe ser un número válido' });
-                return;
-            }
-            data.precio = precioValue;
-        }
+        if (precio !== undefined) data.precio = precio;
+        
         if (Object.keys(data).length === 0) {
-            res.status(400).json({ error: 'No se enviaron campos para actualizar' });
-            return;
+            throw createNotFoundError('No se enviaron campos para actualizar');
         }
+        
         const precioActualizado = await prisma.precioConsultorio.update({
             where: { id },
             data,
         });
+        
         res.status(200).json(precioActualizado);
-    } catch (error) {
-        console.error('Error updating precio consultorio:', error);
-        res.status(404).json({ error: 'PrecioConsultorio no encontrado' });
-    }
-};
+    })
+];
 
-export const deletePrecioConsultorio = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { id } = req.params;
+export const deletePrecioConsultorio = [
+    validateParams(precioConsultorioIdSchema),
+    asyncHandler(async (req: Request, res: Response) => {
+        const { id } = getValidatedParams(req);
+        
         await prisma.precioConsultorio.delete({ where: { id } });
+        
         res.status(200).json({ message: 'PrecioConsultorio eliminado' });
-    } catch (error) {
-        console.error('Error deleting precio consultorio:', error);
-        res.status(404).json({ error: 'PrecioConsultorio no encontrado' });
-    }
-}; 
+    })
+]; 

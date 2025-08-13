@@ -11,25 +11,97 @@ import {
   Menu, 
   X,
   Calendar as CalendarIcon,
-  Package
+  Package,
+  FileText,
+  History,
+  Stethoscope,
+  Building2
 } from "lucide-react";
+import { usePermisos, ConditionalRender } from '../hooks/usePermisos';
+import { MODULOS } from '../services/permisosService';
 
 interface LayoutProps {
   children: React.ReactNode;
   onLogout?: () => void;
 }
 
-const navigation = [
-  { name: "Cobros", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Pacientes", href: "/pacientes", icon: Users },
-  { name: "Usuarios", href: "/usuarios", icon: User },
-  { name: "Calendario", href: "/calendario", icon: CalendarIcon },
-  { name: "Inventario", href: "/inventario", icon: Package },
-];
-
 export default function Layout({ children, onLogout }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+  const { modulosDisponibles, loading, organizacion } = usePermisos();
+
+  // Definir la navegación con verificación de módulos
+  const getNavigation = () => {
+    const navigation = [
+      { 
+        name: "Cobros", 
+        href: "/dashboard", 
+        icon: LayoutDashboard,
+        modulo: MODULOS.COBROS
+      },
+      { 
+        name: "Pacientes", 
+        href: "/pacientes", 
+        icon: Users,
+        modulo: MODULOS.PACIENTES
+      },
+      { 
+        name: "Usuarios", 
+        href: "/usuarios", 
+        icon: User,
+        modulo: MODULOS.USUARIOS
+      },
+      { 
+        name: "Calendario", 
+        href: "/calendario", 
+        icon: CalendarIcon,
+        modulo: MODULOS.CITAS
+      },
+      { 
+        name: "Inventario", 
+        href: "/inventario", 
+        icon: Package,
+        modulo: MODULOS.INVENTARIO
+      },
+      { 
+        name: "Facturación", 
+        href: "/facturacion", 
+        icon: FileText,
+        modulo: MODULOS.FACTURACION
+      },
+      { 
+        name: "Expedientes", 
+        href: "/expedientes", 
+        icon: Stethoscope,
+        modulo: null // Módulo público
+      },
+      { 
+        name: "Historial", 
+        href: "/historial", 
+        icon: History,
+        modulo: MODULOS.HISTORIAL
+      },
+    ];
+
+    // Filtrar navegación según módulos disponibles
+    return navigation.filter(item => {
+      if (item.modulo === null) return true; // Módulos públicos siempre visibles
+      return modulosDisponibles.includes(item.modulo);
+    });
+  };
+
+  const navigation = getNavigation();
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen bg-white items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Cargando permisos...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-white">
@@ -68,8 +140,38 @@ export default function Layout({ children, onLogout }: LayoutProps) {
         )}
       </aside>
       {/* Main content */}
-      <main className="flex-1 min-h-screen ml-[320px] bg-white p-8 overflow-y-auto transition-colors duration-300 flex justify-center">
-        {children}
+      <main className="flex-1 min-h-screen ml-[320px] bg-white overflow-y-auto transition-colors duration-300">
+        {/* Header con información de organización */}
+        <header className="bg-white border-b border-gray-200 px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Building2 className="h-5 w-5 text-gray-600" />
+              <div>
+                <h1 className="text-lg font-semibold text-gray-900">
+                  {organizacion?.nombre || 'Sistema de Gestión'}
+                </h1>
+                {organizacion?.ruc && (
+                  <p className="text-sm text-gray-500">RUC: {organizacion.ruc}</p>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <p className="text-sm font-medium text-gray-900">
+                  {organizacion?.email || 'admin@organizacion.com'}
+                </p>
+                {organizacion?.telefono && (
+                  <p className="text-xs text-gray-500">{organizacion.telefono}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </header>
+        
+        {/* Contenido principal */}
+        <div className="p-8 flex justify-center">
+          {children}
+        </div>
       </main>
     </div>
   );

@@ -2,15 +2,15 @@ import { PrismaClient } from '@prisma/client'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import * as dotenv from 'dotenv'
-import twilio from 'twilio'
+// import twilio from 'twilio' // Comentado temporalmente
 
 dotenv.config()
 
 const prisma = new PrismaClient()
-const client = twilio(
-  process.env.TWILIO_ACCOUNT_SID,
-  process.env.TWILIO_AUTH_TOKEN
-)
+// const client = twilio(
+//   process.env.TWILIO_ACCOUNT_SID,
+//   process.env.TWILIO_AUTH_TOKEN
+// )
 
 async function main() {
   // Calcular fechas de mañana
@@ -26,11 +26,11 @@ async function main() {
         lt: endOfTomorrow
       }
     },
-    include: { pacientes: true }
+    include: { paciente: true }
   })
 
   for (const cita of citas) {
-    const paciente = cita.pacientes
+    const paciente = cita.paciente
     if (!paciente?.telefono) continue
 
     const fecha = format(cita.fecha_inicio, "PPPP 'a las' p", { locale: es })
@@ -38,12 +38,14 @@ async function main() {
     const to = `whatsapp:${paciente.telefono}`
 
     try {
-      const res = await client.messages.create({
-        from: process.env.TWILIO_WHATSAPP_FROM,
-        to,
-        body: mensaje
-      })
-      console.log(`Mensaje enviado a ${paciente.nombre} (${paciente.telefono}): ${res.sid}`)
+      // Comentado temporalmente hasta que se instale twilio
+      // const res = await client.messages.create({
+      //   from: process.env.TWILIO_WHATSAPP_FROM,
+      //   to,
+      //   body: mensaje
+      // })
+      // console.log(`Mensaje enviado a ${paciente.nombre} (${paciente.telefono}): ${res.sid}`)
+      console.log(`Mensaje simulado para ${paciente.nombre} (${paciente.telefono}): ${mensaje}`)
     } catch (err) {
       console.error(`Error enviando a ${paciente.telefono}:`, err)
     }

@@ -40,7 +40,7 @@ export class ProductService {
         type: dto.type,
         unit: dto.unit,
         description: dto.description,
-        costPerUnit: new Decimal(dto.costPerUnit),
+        costPerUnit: Number(dto.costPerUnit),
         minStockLevel: dto.minStockLevel,
         category: dto.category ?? null,
       },

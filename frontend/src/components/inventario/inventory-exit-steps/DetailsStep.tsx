@@ -56,15 +56,15 @@ const renderDetailForm = (tipo: TipoTratamiento | undefined, append: any, fields
     case TipoTratamiento.INMUNOTERAPIA:
       return <InmunoterapiaForm append={append} fields={fields} />
     case TipoTratamiento.PRUEBAS:
-      return <PruebasForm append={append} fields={fields} />
+      return <PruebasForm append={append} />
     case TipoTratamiento.CONSULTA:
-      return <ConsultaForm append={append} fields={fields} />
+      return <ConsultaForm append={append} />
     case TipoTratamiento.GAMMAGLOBULINA:
-      return <GammaglobulinaForm append={append} fields={fields} />
+      return <GammaglobulinaForm append={append} />
     case TipoTratamiento.VACUNAS_PEDIATRICAS:
-      return <VacunasPediatricasForm append={append} fields={fields} />
+      return <VacunasPediatricasForm append={append} />
     case TipoTratamiento.MEDICAMENTOS_EXTRAS:
-      return <MedicamentosExtrasForm append={append} fields={fields} />
+      return <MedicamentosExtrasForm append={append} />
     default:
       return (
         <div className="text-center text-red-600">

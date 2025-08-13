@@ -38,7 +38,7 @@ export default function DashboardPage() {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando dashboard...</p>
+          <p className="text-black">Cargando dashboard...</p>
         </div>
       </div>
     );
@@ -54,19 +54,19 @@ export default function DashboardPage() {
             </svg>
           </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Error al cargar el dashboard</h3>
-          <p className="text-gray-600">{error}</p>
+          <p className="text-black">{error}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto w-full px-4 md:px-8 py-8">
+    <div className="w-full px-2 md:px-4 lg:px-6 py-6">
       {/* Botones para abrir formularios de entrada y salida */}
-      <div className="flex gap-4 mb-8">
+      <div className="flex gap-4 mb-6">
         <Sheet>
           <SheetTrigger asChild>
-            <Button className="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded-lg shadow">
+            <Button className="bg-green-600 hover:bg-green-700 text-white h-14 px-10 rounded-xl shadow-lg transition text-2xl font-bold">
               Registrar Entrada de Inventario
             </Button>
           </SheetTrigger>
@@ -81,7 +81,7 @@ export default function DashboardPage() {
         </Sheet>
         <Sheet>
           <SheetTrigger asChild>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg shadow">
+            <Button className="bg-[#4285f2] hover:bg-[#4285f2]/90 text-white h-14 px-10 rounded-xl shadow-lg transition text-2xl font-bold">
               Registrar Salida de Inventario
             </Button>
           </SheetTrigger>
@@ -96,9 +96,9 @@ export default function DashboardPage() {
         </Sheet>
       </div>
       {/* Header con título y filtros */}
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard de Inventario</h1>
-        <p className="text-gray-600 mb-6">Métricas y análisis del inventario médico</p>
+        <p className="text-black mb-6">Métricas y análisis del inventario médico</p>
 
         {/* Filtro de fechas */}
         <DateRangeFilter 
@@ -117,7 +117,7 @@ export default function DashboardPage() {
         expirationAlerts={data.expirationAlerts}
       />
       
-      <div className="h-8" />
+      <div className="h-4" />
       
       {/* Métricas por categoría */}
       <InventoryMetricsWithModal 
@@ -127,13 +127,13 @@ export default function DashboardPage() {
         lowStockAlerts={data.lowStockAlerts}
       />
       
-      <div className="h-8" />
+      <div className="h-4" />
       
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 lg:gap-6">
         {/* Sección principal */}
-        <section className="lg:col-span-8 flex flex-col gap-8">
+        <section className="xl:col-span-8 flex flex-col gap-6">
           {/* Tablas y listas principales */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-2">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mt-2">
             {/* Productos más usados */}
             <div className="bg-white rounded-2xl shadow-lg p-6">
               <h2 className="text-xl font-bold text-[#1b2538] mb-4">Productos Más Usados</h2>
@@ -142,7 +142,7 @@ export default function DashboardPage() {
                   <div key={i} className="flex items-center justify-between py-3">
                     <div>
                       <span className="font-medium text-gray-900">{product.productName}</span>
-                      <span className="ml-2 text-xs text-gray-500">Salidas: {product.totalExits} | Usos: {product.totalUsage}</span>
+                      <span className="ml-2 text-xs text-black">Salidas: {product.totalExits} | Usos: {product.totalUsage}</span>
                     </div>
                     <div className="flex gap-2">
                       {product.totalExits > 0 && <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">{product.totalExits} salidas</span>}
@@ -161,7 +161,7 @@ export default function DashboardPage() {
                   <div key={movement.id} className="flex items-center justify-between py-3">
                     <div>
                       <span className="font-medium text-gray-900">{movement.productName}</span>
-                      <span className="ml-2 text-xs text-gray-500">{new Date(movement.createdAt).toLocaleDateString('es-MX')}</span>
+                      <span className="ml-2 text-xs text-black">{new Date(movement.createdAt).toLocaleDateString('es-MX')}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium text-gray-900">{movement.quantity}</span>
@@ -179,13 +179,13 @@ export default function DashboardPage() {
               <h2 className="text-xl font-bold text-[#1b2538] mb-4">Productos por Caducar</h2>
               <div className="divide-y divide-gray-100">
                 {data.expirationAlerts.length === 0 ? (
-                  <div className="py-4 text-gray-500 text-center">No hay productos próximos a caducar</div>
+                  <div className="py-4 text-black text-center">No hay productos próximos a caducar</div>
                 ) : (
                   data.expirationAlerts.slice(0, 10).map((product: any, i: number) => (
                     <div key={i} className="flex items-center justify-between py-3">
                       <div>
                         <span className="font-medium text-gray-900">{product.productName}</span>
-                        <span className="ml-2 text-xs text-gray-500">Lote: {product.batchNumber}</span>
+                        <span className="ml-2 text-xs text-black">Lote: {product.batchNumber}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-gray-900">{product.quantity} unidades</span>
@@ -201,20 +201,20 @@ export default function DashboardPage() {
           </div>
         </section>
         {/* Inventario inmovilizado y alertas */}
-        <aside className="lg:col-span-4 flex flex-col gap-8">
+        <aside className="xl:col-span-4 flex flex-col gap-6">
           <div className="bg-white rounded-2xl shadow-xl p-6">
             <h2 className="text-xl font-bold text-[#1b2538] mb-4">Inventario Inmovilizado</h2>
             <div className="divide-y divide-gray-100">
               {data.immobilizedInventory.length === 0 ? (
-                <div className="py-4 text-gray-500 text-center">No hay inventario inmovilizado</div>
+                <div className="py-4 text-black text-center">No hay inventario inmovilizado</div>
               ) : (
                 data.immobilizedInventory.slice(0, 5).map((item: any, i: number) => (
                   <div key={i} className="flex items-center justify-between py-3">
                     <div>
                       <span className="font-medium text-gray-900">{item.productName}</span>
-                      <span className="ml-2 text-xs text-gray-500">{item.quantity} unidades</span>
+                      <span className="ml-2 text-xs text-black">{item.quantity} unidades</span>
                     </div>
-                    <span className="text-xs text-gray-500">{item.daysWithoutMovement} días sin movimiento</span>
+                    <span className="text-xs text-black">{item.daysWithoutMovement} días sin movimiento</span>
                   </div>
                 ))
               )}

@@ -1,12 +1,13 @@
 import { Router } from 'express';
 import * as usuarioController from '../controllers/usuarioController';
+import { authenticateMultiTenant } from '../middleware/tenantMiddleware';
 
 const router = Router();
 
-router.get('/', usuarioController.getAllUsuarios);
-router.get('/:id', usuarioController.getUsuarioById);
-router.post('/', usuarioController.createUsuario);
-router.put('/:id', usuarioController.updateUsuario);
-router.delete('/:id', usuarioController.deleteUsuario);
+router.get('/', authenticateMultiTenant, usuarioController.getAllUsuarios);
+router.get('/:id', authenticateMultiTenant, usuarioController.getUsuarioById);
+router.post('/', authenticateMultiTenant, usuarioController.createUsuario);
+router.put('/:id', authenticateMultiTenant, usuarioController.updateUsuario);
+router.delete('/:id', authenticateMultiTenant, usuarioController.deleteUsuario);
 
 export default router; 

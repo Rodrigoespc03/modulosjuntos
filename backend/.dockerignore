@@ -1,0 +1,151 @@
+# 🐳 DOCKER IGNORE - SISTEMA PROCURA
+# Archivos y directorios a excluir del build de Docker
+
+# ========================================
+# NODE.JS
+# ========================================
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+
+# ========================================
+# DESARROLLO Y TESTING
+# ========================================
+coverage
+.nyc_output
+*.lcov
+.cache
+.parcel-cache
+.eslintcache
+.stylelintcache
+
+# ========================================
+# LOGS
+# ========================================
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# ========================================
+# RUNTIME DATA
+# ========================================
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# ========================================
+# COVERAGE DIRECTORY USED BY TOOLS LIKE ISTANBUL
+# ========================================
+coverage
+*.lcov
+
+# ========================================
+# EDITOR DIRECTORIES AND FILES
+# ========================================
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# ========================================
+# OS GENERATED FILES
+# ========================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ========================================
+# GIT
+# ========================================
+.git
+.gitignore
+.gitattributes
+
+# ========================================
+# DOCKER
+# ========================================
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# ========================================
+# DOCUMENTACIÓN
+# ========================================
+README.md
+*.md
+docs/
+documentation/
+
+# ========================================
+# CONFIGURACIÓN LOCAL
+# ========================================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ========================================
+# TEMPORALES
+# ========================================
+tmp/
+temp/
+.tmp/
+.temp/
+
+# ========================================
+# BUILD ARTIFACTS
+# ========================================
+dist/
+build/
+.next/
+.nuxt/
+.vuepress/dist
+.serverless/
+.fusebox/
+.dynamodb/
+
+# ========================================
+# TESTING
+# ========================================
+tests/
+test/
+__tests__/
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts
+
+# ========================================
+# EXAMPLES
+# ========================================
+examples/
+demos/
+
+# ========================================
+# MONITORING (se copiarán por separado)
+# ========================================
+monitoring/
+nginx/
+
+# ========================================
+# SCRIPTS DE DESARROLLO
+# ========================================
+scripts/
+tools/
+
+
+

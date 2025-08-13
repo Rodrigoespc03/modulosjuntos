@@ -1,0 +1,136 @@
+{
+  "metadata": {
+    "generatedAt": "2025-08-09T18:02:51.745Z",
+    "period": {
+      "start": "2025-08-09T17:02:51.745Z",
+      "end": "2025-08-09T18:02:51.745Z",
+      "duration": "1h"
+    },
+    "endpoint": "all"
+  },
+  "summary": {
+    "totalRequests": 461,
+    "avgResponseTime": 207.55194800336088,
+    "validationSuccessRate": 99.02558348084621,
+    "errorsCount": 0,
+    "memoryUsageMB": 101.29780005522977
+  },
+  "validation": {
+    "totalValidations": 137,
+    "avgValidationTime": 10.337014039353763,
+    "successRate": 99.2632890191096,
+    "slowestValidation": 31.876141189359053,
+    "commonErrors": [
+      {
+        "type": "required_field",
+        "count": 4
+      },
+      {
+        "type": "invalid_format",
+        "count": 0
+      },
+      {
+        "type": "business_rule",
+        "count": 0
+      }
+    ]
+  },
+  "endpoints": [
+    {
+      "endpoint": "GET /api/usuarios",
+      "requestCount": 13,
+      "avgResponseTime": 83.4502407001604,
+      "minResponseTime": 7.68717554973531,
+      "maxResponseTime": 459.3905279166029,
+      "errorRate": 4.429518783098526,
+      "memoryImpact": 14.282806330350674
+    },
+    {
+      "endpoint": "POST /api/usuarios",
+      "requestCount": 129,
+      "avgResponseTime": 227.0835723477212,
+      "minResponseTime": 53.06395097533665,
+      "maxResponseTime": 351.8132194654323,
+      "errorRate": 3.048539112626142,
+      "memoryImpact": 5.298421673131517
+    },
+    {
+      "endpoint": "GET /api/cobros",
+      "requestCount": 23,
+      "avgResponseTime": 22.34836563984686,
+      "minResponseTime": 45.09721797380031,
+      "maxResponseTime": 599.673795093608,
+      "errorRate": 4.635405465489308,
+      "memoryImpact": 19.467858482980766
+    },
+    {
+      "endpoint": "POST /api/cobros",
+      "requestCount": 141,
+      "avgResponseTime": 295.6356351018403,
+      "minResponseTime": 30.566665858150508,
+      "maxResponseTime": 535.6663056793615,
+      "errorRate": 2.0980168658032117,
+      "memoryImpact": 23.650680434596097
+    },
+    {
+      "endpoint": "GET /api/citas",
+      "requestCount": 179,
+      "avgResponseTime": 264.38289055456903,
+      "minResponseTime": 37.87595291402242,
+      "maxResponseTime": 449.5157235692522,
+      "errorRate": 4.878863029704391,
+      "memoryImpact": 23.91009264811835
+    },
+    {
+      "endpoint": "POST /api/citas",
+      "requestCount": 150,
+      "avgResponseTime": 225.43986321155606,
+      "minResponseTime": 6.263029000326121,
+      "maxResponseTime": 568.5791299722907,
+      "errorRate": 2.4501994739497013,
+      "memoryImpact": 14.382061758576743
+    },
+    {
+      "endpoint": "GET /api/pacientes",
+      "requestCount": 45,
+      "avgResponseTime": 314.791532052912,
+      "minResponseTime": 7.45245608292265,
+      "maxResponseTime": 328.2332488928646,
+      "errorRate": 3.2666295000390457,
+      "memoryImpact": 18.19389219844988
+    },
+    {
+      "endpoint": "POST /api/pacientes",
+      "requestCount": 150,
+      "avgResponseTime": 316.46953000044016,
+      "minResponseTime": 29.062593014273837,
+      "maxResponseTime": 161.2920282132855,
+      "errorRate": 3.0378735061893467,
+      "memoryImpact": 19.528349015075275
+    }
+  ],
+  "alerts": [],
+  "recommendations": [
+    {
+      "category": "Performance",
+      "title": "Optimizar validaciones de schemas complejos",
+      "description": "Considerar cache para validaciones frecuentes",
+      "priority": "medium",
+      "estimatedImpact": "Reducción del 15-20% en tiempo de validación"
+    },
+    {
+      "category": "Memory",
+      "title": "Implementar cleanup de métricas automático",
+      "description": "Configurar limpieza periódica de métricas antigas",
+      "priority": "low",
+      "estimatedImpact": "Reducción del uso de memoria en 10-15%"
+    },
+    {
+      "category": "Monitoring",
+      "title": "Agregar más puntos de monitoreo",
+      "description": "Incluir métricas de base de datos y cache",
+      "priority": "high",
+      "estimatedImpact": "Mejor visibilidad de bottlenecks"
+    }
+  ]
+}

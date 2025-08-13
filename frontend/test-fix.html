@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Fix</title>
+</head>
+<body>
+    <h1>Test Fix - Token y API</h1>
+    <div id="result"></div>
+    <button onclick="login()">Login</button>
+    <button onclick="testUpdate()">Test Update</button>
+    
+    <script>
+        async function login() {
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'dr.garcia@clinica.com',
+                        password: '123456'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.token) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    document.getElementById('result').innerHTML = `
+                        <h3>Login exitoso:</h3>
+                        <p>Token: ${data.token.substring(0, 50)}...</p>
+                        <p>Usuario: ${data.user.email}</p>
+                    `;
+                } else {
+                    document.getElementById('result').innerHTML = `
+                        <h3>Error en login:</h3>
+                        <p>${JSON.stringify(data)}</p>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('result').innerHTML = `
+                    <h3>Error:</h3>
+                    <p>${error.message}</p>
+                `;
+            }
+        }
+        
+        async function testUpdate() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('No hay token. Haz login primero.');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/cobros/7da9bbe4-1cdf-4306-8ce8-2851c87307ad', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ estado: 'COMPLETADO' })
+                });
+                
+                const result = await response.json();
+                document.getElementById('result').innerHTML += `
+                    <h3>Test Update:</h3>
+                    <p>Status: ${response.status}</p>
+                    <p>Response: ${JSON.stringify(result)}</p>
+                `;
+            } catch (error) {
+                document.getElementById('result').innerHTML += `
+                    <h3>Error en Update:</h3>
+                    <p>${error.message}</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html> 

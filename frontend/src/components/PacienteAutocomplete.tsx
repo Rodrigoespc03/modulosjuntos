@@ -270,7 +270,7 @@ export function PacienteAutocomplete({ value, onChange, onError }: PacienteAutoc
       {showDropdown && (pacientes.length > 0 || isLoading) && (
         <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
           {isLoading ? (
-            <div className="p-4 text-center text-gray-500">Buscando...</div>
+            <div className="p-4 text-center text-black">Buscando...</div>
           ) : (
             pacientes.map((paciente) => (
               <div
@@ -279,7 +279,7 @@ export function PacienteAutocomplete({ value, onChange, onError }: PacienteAutoc
                 onClick={() => handleSelectPaciente(paciente)}
               >
                 <div className="font-medium">{paciente.nombre} {paciente.apellido}</div>
-                <div className="text-sm text-gray-500">
+                <div className="text-sm text-black">
                   {paciente.telefono} • {paciente.email}
                 </div>
               </div>
@@ -290,7 +290,7 @@ export function PacienteAutocomplete({ value, onChange, onError }: PacienteAutoc
 
       {/* Mensaje si no hay resultados */}
       {showDropdown && !isLoading && pacientes.length === 0 && searchTerm.length >= 2 && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg p-4 text-center text-gray-500">
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg p-4 text-center text-black">
           No se encontraron pacientes. Usa "Nuevo" para agregar uno.
         </div>
       )}

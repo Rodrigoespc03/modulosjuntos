@@ -3,13 +3,29 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
+  // Organización por defecto
+  let organizacion = await prisma.organizaciones.findFirst({ where: { nombre: 'Organización Demo' } });
+  if (!organizacion) {
+    organizacion = await prisma.organizaciones.create({
+      data: {
+        nombre: 'Organización Demo',
+        ruc: '12345678901',
+        direccion: 'Dirección Demo',
+        telefono: '555-0000',
+        email: 'demo@organizacion.com',
+      },
+    });
+  }
+
   // Consultorio
-  let consultorio = await prisma.consultorio.findFirst({ where: { nombre: 'Consultorio Demo' } });
+  let consultorio = await prisma.consultorio.findFirst({ where: { 
+    nombre: 'Consultorio Demo' } });
   if (!consultorio) {
     consultorio = await prisma.consultorio.create({
       data: {
         nombre: 'Consultorio Demo',
         direccion: 'Calle Falsa 123',
+        organizacion_id: organizacion.id,
       },
     });
   }
@@ -25,6 +41,7 @@ async function main() {
       email: 'demo@procura.com',
       telefono: '555-1234',
       consultorio_id: consultorio.id,
+      organizacion_id: organizacion.id,
     },
   });
 
@@ -40,6 +57,7 @@ async function main() {
         direccion: 'Calle Paciente 456',
         telefono: '555-5678',
         email: 'paciente@demo.com',
+        organizacion_id: organizacion.id,
       },
     });
   }

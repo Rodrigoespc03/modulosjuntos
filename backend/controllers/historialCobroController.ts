@@ -1,26 +1,31 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import asyncHandler from '../utils/asyncHandler';
+import { 
+  createHistorialCobroSchema,
+  updateHistorialCobroSchema,
+  historialCobroIdSchema
+} from '../schemas/validationSchemas';
+import { validateBody, validateParams, getValidatedBody, getValidatedParams } from '../middleware/validation';
+import { createNotFoundError } from '../middleware/errorHandler';
 
 const prisma = new PrismaClient();
 
-export const getAllHistorialCobros = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const historial = await prisma.historialCobro.findMany({
-            include: {
-                cobro: true,
-                usuario: true,
-            },
-        });
-        res.json(historial);
-    } catch (error) {
-        console.error('Error getting all historial cobros:', error);
-        res.status(500).json({ error: error instanceof Error ? error.message : 'Error interno del servidor' });
-    }
-};
+export const getAllHistorialCobros = asyncHandler(async (req: Request, res: Response) => {
+    const historial = await prisma.historialCobro.findMany({
+        include: {
+            cobro: true,
+            usuario: true,
+        },
+    });
+    res.json(historial);
+});
 
-export const getHistorialCobroById = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { id } = req.params;
+export const getHistorialCobroById = [
+    validateParams(historialCobroIdSchema),
+    asyncHandler(async (req: Request, res: Response) => {
+        const { id } = getValidatedParams(req);
+        
         const registro = await prisma.historialCobro.findUnique({
             where: { id },
             include: {
@@ -30,42 +35,28 @@ export const getHistorialCobroById = async (req: Request, res: Response): Promis
         });
         
         if (!registro) {
-            res.status(404).json({ error: 'Registro de historial no encontrado' });
-            return;
+            throw createNotFoundError('Registro de historial no encontrado');
         }
         
         res.json(registro);
-    } catch (error) {
-        console.error('Error getting historial cobro by id:', error);
-        res.status(500).json({ error: error instanceof Error ? error.message : 'Error interno del servidor' });
-    }
-};
+    })
+];
 
-export const createHistorialCobro = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { cobro_id, usuario_id, tipo_cambio, detalles_antes, detalles_despues } = req.body;
+export const createHistorialCobro = [
+    validateBody(createHistorialCobroSchema),
+    asyncHandler(async (req: Request, res: Response) => {
+        const { cobro_id, usuario_id, tipo_cambio, detalles_antes, detalles_despues } = getValidatedBody(req);
         
-        if (!cobro_id || !usuario_id || !tipo_cambio || !detalles_despues) {
-            res.status(400).json({ error: 'Faltan campos requeridos' });
-            return;
-        }
-        
+        // Verificar que el cobro existe
         const cobro = await prisma.cobro.findUnique({ where: { id: cobro_id } });
         if (!cobro) {
-            res.status(400).json({ error: 'El cobro especificado no existe' });
-            return;
+            throw createNotFoundError('El cobro especificado no existe');
         }
         
+        // Verificar que el usuario existe
         const usuario = await prisma.usuario.findUnique({ where: { id: usuario_id } });
         if (!usuario) {
-            res.status(400).json({ error: 'El usuario especificado no existe' });
-            return;
-        }
-        
-        const tiposValidos = ['CREACION', 'EDICION', 'ELIMINACION', 'ACTUALIZACION'];
-        if (!tiposValidos.includes(tipo_cambio)) {
-            res.status(400).json({ error: 'Tipo de cambio inválido' });
-            return;
+            throw createNotFoundError('El usuario especificado no existe');
         }
         
         const registro = await prisma.historialCobro.create({
@@ -79,24 +70,22 @@ export const createHistorialCobro = async (req: Request, res: Response): Promise
         });
         
         res.status(200).json(registro);
-    } catch (error) {
-        console.error('Error creating historial cobro:', error);
-        res.status(400).json({ error: error instanceof Error ? error.message : 'Error al crear historial cobro' });
-    }
-};
+    })
+];
 
-export const updateHistorialCobro = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { id } = req.params;
-        const { cobro_id, usuario_id, tipo_cambio, detalles_antes, detalles_despues } = req.body;
+export const updateHistorialCobro = [
+    validateParams(historialCobroIdSchema),
+    validateBody(updateHistorialCobroSchema),
+    asyncHandler(async (req: Request, res: Response) => {
+        const { id } = getValidatedParams(req);
+        const { cobro_id, usuario_id, tipo_cambio, detalles_antes, detalles_despues } = getValidatedBody(req);
         
         const updateData: any = {};
         
         if (cobro_id) {
             const cobro = await prisma.cobro.findUnique({ where: { id: cobro_id } });
             if (!cobro) {
-                res.status(400).json({ error: 'El cobro especificado no existe' });
-                return;
+                throw createNotFoundError('El cobro especificado no existe');
             }
             updateData.cobro_id = cobro_id;
         }
@@ -104,18 +93,12 @@ export const updateHistorialCobro = async (req: Request, res: Response): Promise
         if (usuario_id) {
             const usuario = await prisma.usuario.findUnique({ where: { id: usuario_id } });
             if (!usuario) {
-                res.status(400).json({ error: 'El usuario especificado no existe' });
-                return;
+                throw createNotFoundError('El usuario especificado no existe');
             }
             updateData.usuario_id = usuario_id;
         }
         
         if (tipo_cambio) {
-            const tiposValidos = ['CREACION', 'EDICION', 'ELIMINACION', 'ACTUALIZACION'];
-            if (!tiposValidos.includes(tipo_cambio)) {
-                res.status(400).json({ error: 'Tipo de cambio inválido' });
-                return;
-            }
             updateData.tipo_cambio = tipo_cambio;
         }
         
@@ -133,21 +116,16 @@ export const updateHistorialCobro = async (req: Request, res: Response): Promise
         });
         
         res.status(200).json(registro);
-    } catch (error) {
-        console.error('Error updating historial cobro:', error);
-        res.status(404).json({ error: 'Registro de historial no encontrado' });
-    }
-};
+    })
+];
 
-export const deleteHistorialCobro = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { id } = req.params;
+export const deleteHistorialCobro = [
+    validateParams(historialCobroIdSchema),
+    asyncHandler(async (req: Request, res: Response) => {
+        const { id } = getValidatedParams(req);
         
         await prisma.historialCobro.delete({ where: { id } });
         
         res.status(200).json({ message: 'HistorialCobro eliminado' });
-    } catch (error) {
-        console.error('Error deleting historial cobro:', error);
-        res.status(404).json({ error: 'Registro de historial no encontrado' });
-    }
-}; 
+    })
+]; 

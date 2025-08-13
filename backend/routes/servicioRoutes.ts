@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { asyncHandler } from '../utils/asyncHandler';
+import asyncHandler from '../utils/asyncHandler';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -35,7 +35,10 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
     data: {
       nombre,
       descripcion: descripcion || null,
-      precio_base: parseFloat(precio_base)
+      precio_base: parseFloat(precio_base),
+      organizaciones: {
+        connect: { id: (req as any).user?.organizacion_id }
+      }
     }
   });
   res.status(200).json(servicio);

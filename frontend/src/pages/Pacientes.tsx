@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { getPacientes, crearPaciente, actualizarPaciente, borrarPaciente } from "@/services/pacientesService";
+import CuestionarioPacientes from '../components/CuestionarioPacientes';
 
 const pacienteSchema = z.object({
   nombre: z.string().min(1, "El nombre es requerido"),
@@ -28,6 +29,7 @@ export default function Pacientes() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [editPaciente, setEditPaciente] = useState<any | null>(null);
   const [editLoading, setEditLoading] = useState(false);
+  const [showCuestionario, setShowCuestionario] = useState(false);
 
   const {
     register,
@@ -116,17 +118,28 @@ export default function Pacientes() {
 
   return (
     <div className="w-full max-w-[1600px] pt-10">
-      <div className="flex items-center justify-between mb-12">
-        <h1 className="text-4xl font-extrabold text-[#4285f2]">Gestión de Pacientes</h1>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <button
-              className="bg-[#4285f2] text-white h-14 px-10 rounded-xl shadow-lg hover:bg-[#4285f2]/90 transition text-2xl font-bold"
-            >
-              Nuevo paciente
-            </button>
-          </DialogTrigger>
-        </Dialog>
+                     <div className="flex items-center justify-between mb-12">
+                 <h1 className="text-4xl font-extrabold text-[#4285f2]">Gestión de Pacientes</h1>
+                 <div className="flex gap-4">
+                                      <Dialog open={showCuestionario} onOpenChange={setShowCuestionario}>
+                     <DialogTrigger asChild>
+                       <button
+                         className="bg-green-600 text-white h-14 px-10 rounded-xl shadow-lg hover:bg-green-700 transition text-2xl font-bold"
+                       >
+                         Gestionar cuestionario
+                       </button>
+                     </DialogTrigger>
+          </Dialog>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <button
+                className="bg-[#4285f2] text-white h-14 px-10 rounded-xl shadow-lg hover:bg-[#4285f2]/90 transition text-2xl font-bold"
+              >
+                Nuevo paciente
+              </button>
+            </DialogTrigger>
+          </Dialog>
+        </div>
       </div>
       <div className="bg-white rounded-2xl shadow-xl overflow-x-auto mt-12">
         <table className="min-w-full border text-xl">
@@ -407,6 +420,27 @@ export default function Pacientes() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog para Gestionar Cuestionario de Pacientes */}
+      <Dialog open={showCuestionario} onOpenChange={setShowCuestionario}>
+        <DialogContent className="max-w-6xl max-h-[90vh] p-0 rounded-2xl overflow-hidden flex flex-col">
+          <DialogHeader className="p-6 pb-4 flex-shrink-0">
+            <DialogTitle className="text-3xl font-bold text-[#4285f2]">Cuestionario de Pacientes</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto px-6 pb-6">
+            <CuestionarioPacientes 
+              embedded={true} 
+              pacienteId="PAC-001"
+              onGuardar={(datos) => {
+                console.log('Cuestionario guardado:', datos);
+                setShowCuestionario(false);
+              }}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      
     </div>
   );
 } 

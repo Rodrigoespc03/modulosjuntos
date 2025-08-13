@@ -22,7 +22,7 @@ export function DashboardMetrics({ totalInventoryValue, totalUsedInventoryCost, 
   const navigate = useNavigate()
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-8 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 lg:gap-6 mb-8">
         <div className="bg-blue-600 rounded-2xl shadow-2xl p-8 flex flex-col items-center justify-center min-h-[150px] animate-fade-in">
           <div className="w-16 h-16 flex items-center justify-center rounded-xl bg-white/20 mb-3">
             <DollarSign className="w-10 h-10 text-white" />

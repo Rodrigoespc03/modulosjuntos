@@ -108,6 +108,20 @@ async function main() {
   await seedInventoryProducts();
   await seedAllergens();
 
+  // Organización dummy
+  const organizacion = await prisma.organizaciones.upsert({
+    where: { id: 'dummy-organizacion-id' },
+    update: {},
+    create: {
+      id: 'dummy-organizacion-id',
+      nombre: 'Organización Dummy',
+      ruc: '12345678901',
+      direccion: 'Dirección Dummy',
+      telefono: '0000000000',
+      email: 'dummy@organizacion.com',
+    },
+  });
+
   // Consultorio dummy
   await prisma.consultorio.upsert({
     where: { id: 'dummy-consultorio-id' },
@@ -116,6 +130,7 @@ async function main() {
       id: 'dummy-consultorio-id',
       nombre: 'Consultorio Dummy',
       direccion: 'Calle Falsa 123',
+      organizacion_id: organizacion.id,
     },
   });
 
@@ -131,6 +146,7 @@ async function main() {
       genero: 'Otro',
       telefono: '0000000000',
       email: 'dummy@dummy.com',
+      organizacion_id: organizacion.id,
     },
   });
 
@@ -146,6 +162,7 @@ async function main() {
       telefono: '0000000000',
       rol: 'DOCTOR',
       consultorio_id: 'dummy-consultorio-id',
+      organizacion_id: organizacion.id,
     },
   });
 

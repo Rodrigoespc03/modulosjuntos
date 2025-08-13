@@ -193,7 +193,7 @@ export default function InventoryExitForm() {
           </div>
         )}
         {Object.values(methods.formState.errors).length > 0 && (
-          <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded p-3 text-sm">
+          <div className="bg-blue-50 border border-blue-200 text-blue-800 rounded p-3 text-sm">
             {Object.values(methods.formState.errors).map((err: any, i) => err?.message && <div key={i}>{err.message}</div>)}
           </div>
         )}

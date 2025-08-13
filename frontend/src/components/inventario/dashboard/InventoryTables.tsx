@@ -10,8 +10,6 @@ import {
 import type { 
   DashboardResponseDto, 
   CategoryInventoryDto,
-  MostUsedProductDto,
-  MovementDto,
   ImmobilizedInventoryDto,
   ExpirationAlertDto
 } from '@/types/dashboard'
@@ -39,7 +37,7 @@ export function InventoryTables({ data }: InventoryTablesProps) {
         
         <div className="bg-gray-50 rounded-xl p-4">
           <div className="space-y-3">
-            {data.mostUsedProducts.slice(0, 5).map((product, index) => (
+            {data.mostUsedProducts.slice(0, 5).map((product: any, index: number) => (
               <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
                 <div className="flex-1">
                   <p className="font-medium text-gray-900">{product.productName}</p>
@@ -77,7 +75,7 @@ export function InventoryTables({ data }: InventoryTablesProps) {
         
         <div className="bg-gray-50 rounded-xl p-4">
           <div className="space-y-3">
-            {data.recentMovements.slice(0, 5).map((movement) => (
+            {data.recentMovements.slice(0, 5).map((movement: any) => (
               <div key={movement.id} className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
                 <div className="flex-1">
                   <p className="font-medium text-gray-900">{movement.productName}</p>
@@ -118,7 +116,7 @@ export function InventoryTables({ data }: InventoryTablesProps) {
           
           <div className="bg-gray-50 rounded-xl p-4">
             <div className="space-y-3">
-              {data.lowStockAlerts.map((product, index) => (
+              {data.lowStockAlerts.map((product: any, index: number) => (
                 <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm border-l-4 border-red-500">
                   <div className="flex-1">
                     <p className="font-medium text-gray-900">{product.name}</p>
@@ -152,7 +150,7 @@ export function InventoryTables({ data }: InventoryTablesProps) {
           
           <div className="bg-gray-50 rounded-xl p-4">
             <div className="space-y-3">
-              {data.expirationAlerts.map((product, index) => (
+              {data.expirationAlerts.map((product: any, index: number) => (
                 <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm border-l-4 border-orange-500">
                   <div className="flex-1">
                     <p className="font-medium text-gray-900">{product.productName}</p>

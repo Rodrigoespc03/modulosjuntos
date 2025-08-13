@@ -15,7 +15,7 @@ export async function getDashboardMetrics(params: DashboardQueryParams = {}): Pr
   if (params.from) searchParams.append('from', params.from)
   if (params.to) searchParams.append('to', params.to)
 
-  const url = `http://localhost:3000/api/dashboard/public?${searchParams.toString()}`
+  const url = `/api/dashboard/public?${searchParams.toString()}`
   console.log('Fetching from URL:', url)
 
   try {

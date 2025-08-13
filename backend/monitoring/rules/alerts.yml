@@ -1,0 +1,310 @@
+# 🚨 PROMETHEUS ALERT RULES - SISTEMA PROCURA
+# Reglas de alertas para monitoreo proactivo
+
+groups:
+  # ========================================
+  # ALERTAS DEL BACKEND
+  # ========================================
+  - name: procura-backend-alerts
+    rules:
+      # Backend down
+      - alert: BackendDown
+        expr: up{job="procura-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: backend
+        annotations:
+          summary: "Backend service is down"
+          description: "The Sistema Procura backend has been down for more than 1 minute"
+
+      # High response time
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: backend
+        annotations:
+          summary: "High response time detected"
+          description: "95th percentile response time is above 1 second"
+
+      # High error rate
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          service: backend
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is above 5% for the last 5 minutes"
+
+      # Memory usage high
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          service: backend
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is above 85%"
+
+      # CPU usage high
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: backend
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is above 80%"
+
+  # ========================================
+  # ALERTAS DE BASE DE DATOS
+  # ========================================
+  - name: procura-database-alerts
+    rules:
+      # PostgreSQL down
+      - alert: PostgresDown
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: database
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL database has been down for more than 1 minute"
+
+      # High database connections
+      - alert: HighDBConnections
+        expr: pg_stat_database_numbackends > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: database
+        annotations:
+          summary: "High database connections"
+          description: "Database has more than 80 active connections"
+
+      # Slow queries
+      - alert: SlowQueries
+        expr: rate(pg_stat_activity_max_tx_duration[5m]) > 30
+        for: 5m
+        labels:
+          severity: warning
+          service: database
+        annotations:
+          summary: "Slow database queries detected"
+          description: "Queries taking longer than 30 seconds detected"
+
+  # ========================================
+  # ALERTAS DE CACHE
+  # ========================================
+  - name: procura-cache-alerts
+    rules:
+      # Redis down
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: cache
+        annotations:
+          summary: "Redis is down"
+          description: "Redis cache has been down for more than 1 minute"
+
+      # Low cache hit rate
+      - alert: LowCacheHitRate
+        expr: redis_keyspace_hits_total / (redis_keyspace_hits_total + redis_keyspace_misses_total) < 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: cache
+        annotations:
+          summary: "Low cache hit rate"
+          description: "Cache hit rate is below 80%"
+
+      # High memory usage in Redis
+      - alert: RedisHighMemory
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          service: cache
+        annotations:
+          summary: "High Redis memory usage"
+          description: "Redis memory usage is above 85%"
+
+  # ========================================
+  # ALERTAS DE SEGURIDAD
+  # ========================================
+  - name: procura-security-alerts
+    rules:
+      # High failed login attempts
+      - alert: HighFailedLogins
+        expr: rate(login_attempts_total{status="failed"}[5m]) > 10
+        for: 2m
+        labels:
+          severity: critical
+          service: security
+        annotations:
+          summary: "High failed login attempts"
+          description: "More than 10 failed login attempts per minute detected"
+
+      # Unusual API activity
+      - alert: UnusualAPIActivity
+        expr: rate(http_requests_total[5m]) > 1000
+        for: 5m
+        labels:
+          severity: warning
+          service: security
+        annotations:
+          summary: "Unusual API activity detected"
+          description: "API request rate is above 1000 requests per minute"
+
+      # Rate limiting triggered
+      - alert: RateLimitTriggered
+        expr: rate(rate_limit_hits_total[5m]) > 50
+        for: 2m
+        labels:
+          severity: warning
+          service: security
+        annotations:
+          summary: "Rate limiting frequently triggered"
+          description: "Rate limiting is being triggered more than 50 times per minute"
+
+  # ========================================
+  # ALERTAS DE DISCO
+  # ========================================
+  - name: procura-disk-alerts
+    rules:
+      # Disk space low
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "Low disk space"
+          description: "Disk space usage is above 90%"
+
+      # Disk I/O high
+      - alert: HighDiskIO
+        expr: rate(node_disk_io_time_seconds_total[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "High disk I/O"
+          description: "Disk I/O utilization is above 80%"
+
+  # ========================================
+  # ALERTAS DE RED
+  # ========================================
+  - name: procura-network-alerts
+    rules:
+      # Network errors
+      - alert: NetworkErrors
+        expr: rate(node_network_receive_errs_total[5m]) + rate(node_network_transmit_errs_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: network
+        annotations:
+          summary: "Network errors detected"
+          description: "Network error rate is above 10 errors per minute"
+
+      # High network usage
+      - alert: HighNetworkUsage
+        expr: rate(node_network_receive_bytes_total[5m]) + rate(node_network_transmit_bytes_total[5m]) > 1000000000
+        for: 5m
+        labels:
+          severity: warning
+          service: network
+        annotations:
+          summary: "High network usage"
+          description: "Network usage is above 1GB per minute"
+
+  # ========================================
+  # ALERTAS DE APLICACIÓN
+  # ========================================
+  - name: procura-application-alerts
+    rules:
+      # Application errors
+      - alert: ApplicationErrors
+        expr: rate(application_errors_total[5m]) > 5
+        for: 5m
+        labels:
+          severity: critical
+          service: application
+        annotations:
+          summary: "High application error rate"
+          description: "Application is generating more than 5 errors per minute"
+
+      # Database connection pool exhausted
+      - alert: DBConnectionPoolExhausted
+        expr: database_connections_active / database_connections_max > 0.9
+        for: 5m
+        labels:
+          severity: critical
+          service: application
+        annotations:
+          summary: "Database connection pool nearly exhausted"
+          description: "Database connection pool usage is above 90%"
+
+      # Cache connection issues
+      - alert: CacheConnectionIssues
+        expr: rate(cache_connection_errors_total[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: application
+        annotations:
+          summary: "Cache connection issues"
+          description: "Cache connection errors are occurring"
+
+  # ========================================
+  # ALERTAS DE BUSINESS LOGIC
+  # ========================================
+  - name: procura-business-alerts
+    rules:
+      # No new appointments
+      - alert: NoNewAppointments
+        expr: rate(appointments_created_total[1h]) == 0
+        for: 1h
+        labels:
+          severity: warning
+          service: business
+        annotations:
+          summary: "No new appointments created"
+          description: "No appointments have been created in the last hour"
+
+      # Payment processing issues
+      - alert: PaymentProcessingIssues
+        expr: rate(payment_processing_errors_total[5m]) > 2
+        for: 5m
+        labels:
+          severity: critical
+          service: business
+        annotations:
+          summary: "Payment processing issues"
+          description: "Payment processing errors are above threshold"
+
+      # High cancellation rate
+      - alert: HighCancellationRate
+        expr: rate(appointments_cancelled_total[1h]) / rate(appointments_created_total[1h]) > 0.3
+        for: 1h
+        labels:
+          severity: warning
+          service: business
+        annotations:
+          summary: "High appointment cancellation rate"
+          description: "Cancellation rate is above 30%"
+
+
+

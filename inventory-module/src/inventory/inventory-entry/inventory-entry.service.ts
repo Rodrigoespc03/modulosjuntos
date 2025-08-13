@@ -38,9 +38,9 @@ export class InventoryEntryService {
       }
 
       // Convert to Decimal for precise calculations
-      const quantity = new Decimal(dto.quantity);
-      const unitCost = new Decimal(dto.unitCost);
-      const totalCost = quantity.mul(unitCost);
+          const quantity = Number(dto.quantity);
+    const unitCost = Number(dto.unitCost);
+      const totalCost = quantity * unitCost;
 
       // Process entry in a transaction
       return this.prisma.$transaction(async (tx: any) => {
@@ -53,7 +53,7 @@ export class InventoryEntryService {
               where: { id: supplier.id },
               data: {
                 amountSupplied: {
-                  increment: totalCost.toNumber(),
+                  increment: totalCost,
                 },
               },
             });
@@ -62,7 +62,7 @@ export class InventoryEntryService {
               data: {
                 name: dto.supplierName,
                 invoiceNumber: dto.invoiceNumber,
-                amountSupplied: totalCost.toNumber(),
+                amountSupplied: totalCost,
               },
             });
           }
@@ -79,9 +79,9 @@ export class InventoryEntryService {
             sedeId: dto.sedeId,
             productId: dto.productId,
             type: MovementType.ENTRY,
-            quantity: quantity.toNumber(),
-            unitCost: unitCost.toNumber(),
-            totalCost: totalCost.toNumber(),
+                    quantity: quantity,
+        unitCost: unitCost,
+        totalCost: totalCost,
             batchNumber: dto.batchNumber ?? undefined,
             expiryDate: dto.expiryDate ? new Date(dto.expiryDate) : undefined,
           },
@@ -136,14 +136,14 @@ export class InventoryEntryService {
               sedeId: dto.sedeId,
               batchNumber: dto.batchNumber || 'N/A',
               expiryDate: new Date(dto.expiryDate),
-              quantity: quantity.toNumber(),
+              quantity: quantity,
             },
           });
         }
 
         // Calculate updated inventory value
-        const updatedQuantity = updatedStock.quantity instanceof Decimal ? updatedStock.quantity.toNumber() : Number(updatedStock.quantity);
-        const inventoryValue = updatedQuantity * unitCost.toNumber();
+        const updatedQuantity = Number(updatedStock.quantity);
+        const inventoryValue = updatedQuantity * unitCost;
 
         // Map movement to MovementDto
         const movementDto: MovementDto = {
@@ -153,8 +153,8 @@ export class InventoryEntryService {
           productId: movement.productId,
           type: movement.type,
           quantity: typeof movement.quantity === 'number' ? movement.quantity : Number(movement.quantity),
-          unitCost: movement.unitCost instanceof Decimal ? movement.unitCost.toNumber() : Number(movement.unitCost),
-          totalCost: movement.totalCost instanceof Decimal ? movement.totalCost.toNumber() : Number(movement.totalCost),
+                  unitCost: Number(movement.unitCost),
+        totalCost: Number(movement.totalCost),
           batchNumber: movement.batchNumber ?? undefined,
           expiryDate: movement.expiryDate ?? undefined,
           createdAt: movement.createdAt,
@@ -290,7 +290,7 @@ export class InventoryEntryService {
       const category = entry.product.category || 'Sin categoría'
       const existing = categoryMap.get(category) || { totalQuantity: 0, totalValue: 0, entries: [] }
       const quantity = Number(entry.quantity)
-      const value = entry.totalCost instanceof Decimal ? entry.totalCost.toNumber() : Number(entry.totalCost)
+      const value = Number(entry.totalCost)
       existing.entries.push({ name: entry.product.name, quantity, totalValue: value, createdAt: entry.createdAt })
       existing.totalQuantity += quantity
       existing.totalValue += value

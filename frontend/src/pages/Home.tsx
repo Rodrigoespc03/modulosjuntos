@@ -13,35 +13,35 @@ export default function Home() {
           className="p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow"
         >
           <h3 className="text-xl font-semibold mb-2">Dashboard</h3>
-          <p className="text-gray-600">Métricas y estadísticas</p>
+          <p className="text-black">Métricas y estadísticas</p>
         </Link>
         <Link
           to="/cobros"
           className="p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow"
         >
           <h3 className="text-xl font-semibold mb-2">Cobros</h3>
-          <p className="text-gray-600">Gestionar cobros y facturación</p>
+          <p className="text-black">Gestionar cobros y facturación</p>
         </Link>
         <Link
           to="/conceptos"
           className="p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow"
         >
           <h3 className="text-xl font-semibold mb-2">Conceptos</h3>
-          <p className="text-gray-600">Administrar servicios y precios</p>
+          <p className="text-black">Administrar servicios y precios</p>
         </Link>
         <Link
           to="/pacientes"
           className="p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow"
         >
           <h3 className="text-xl font-semibold mb-2">Pacientes</h3>
-          <p className="text-gray-600">Gestionar información de pacientes</p>
+          <p className="text-black">Gestionar información de pacientes</p>
         </Link>
         <Link
           to="/usuarios"
           className="p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow"
         >
           <h3 className="text-xl font-semibold mb-2">Usuarios</h3>
-          <p className="text-gray-600">Administrar usuarios del sistema</p>
+          <p className="text-black">Administrar usuarios del sistema</p>
         </Link>
       </div>
     </div>

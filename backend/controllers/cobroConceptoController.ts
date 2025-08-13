@@ -1,26 +1,31 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import asyncHandler from '../utils/asyncHandler';
+import { 
+  createCobroConceptoSchema,
+  updateCobroConceptoSchema,
+  cobroConceptoIdSchema
+} from '../schemas/validationSchemas';
+import { validateBody, validateParams, getValidatedBody, getValidatedParams } from '../middleware/validation';
+import { createNotFoundError } from '../middleware/errorHandler';
 
 const prisma = new PrismaClient();
 
-export const getAllCobroConceptos = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const conceptos = await prisma.cobroConcepto.findMany({
-            include: {
-                cobro: true,
-                consultorio: true,
-            },
-        });
-        res.json(conceptos);
-    } catch (error) {
-        console.error('Error getting all cobro conceptos:', error);
-        res.status(500).json({ error: error instanceof Error ? error.message : 'Error interno del servidor' });
-    }
-};
+export const getAllCobroConceptos = asyncHandler(async (req: Request, res: Response) => {
+    const conceptos = await prisma.cobroConcepto.findMany({
+        include: {
+            cobro: true,
+            consultorio: true,
+        },
+    });
+    res.json(conceptos);
+});
 
-export const getCobroConceptoById = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { id } = req.params;
+export const getCobroConceptoById = [
+    validateParams(cobroConceptoIdSchema),
+    asyncHandler(async (req: Request, res: Response) => {
+        const { id } = getValidatedParams(req);
+        
         const concepto = await prisma.cobroConcepto.findUnique({
             where: { id },
             include: {
@@ -30,42 +35,35 @@ export const getCobroConceptoById = async (req: Request, res: Response): Promise
         });
         
         if (!concepto) {
-            res.status(404).json({ error: 'CobroConcepto no encontrado' });
-            return;
+            throw createNotFoundError('CobroConcepto no encontrado');
         }
         
         res.json(concepto);
-    } catch (error) {
-        console.error('Error getting cobro concepto by id:', error);
-        res.status(500).json({ error: error instanceof Error ? error.message : 'Error interno del servidor' });
-    }
-};
+    })
+];
 
-export const createCobroConcepto = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { cobro_id, servicio_id, precio_unitario, cantidad, subtotal, consultorio_id } = req.body;
+export const createCobroConcepto = [
+    validateBody(createCobroConceptoSchema),
+    asyncHandler(async (req: Request, res: Response) => {
+        const validatedData = getValidatedBody(req);
+        const { cobro_id, servicio_id, precio_unitario, cantidad, subtotal, consultorio_id } = validatedData;
         
-        if (!cobro_id || !servicio_id || !precio_unitario || !cantidad || !subtotal || !consultorio_id) {
-            res.status(400).json({ error: 'Faltan campos requeridos' });
-            return;
-        }
-        
+        // Verificar que el cobro existe
         const cobro = await prisma.cobro.findUnique({ where: { id: cobro_id } });
         if (!cobro) {
-            res.status(400).json({ error: 'El cobro especificado no existe' });
-            return;
+            throw createNotFoundError('El cobro especificado no existe');
         }
         
+        // Verificar que el consultorio existe
         const consultorio = await prisma.consultorio.findUnique({ where: { id: consultorio_id } });
         if (!consultorio) {
-            res.status(400).json({ error: 'El consultorio especificado no existe' });
-            return;
+            throw createNotFoundError('El consultorio especificado no existe');
         }
         
+        // Verificar que el servicio existe
         const servicio = await prisma.servicio.findUnique({ where: { id: servicio_id } });
         if (!servicio) {
-            res.status(400).json({ error: 'El servicio especificado no existe' });
-            return;
+            throw createNotFoundError('El servicio especificado no existe');
         }
         
         const concepto = await prisma.cobroConcepto.create({
@@ -80,24 +78,23 @@ export const createCobroConcepto = async (req: Request, res: Response): Promise<
         });
         
         res.status(200).json(concepto);
-    } catch (error) {
-        console.error('Error creating cobro concepto:', error);
-        res.status(400).json({ error: error instanceof Error ? error.message : 'Error al crear cobro concepto' });
-    }
-};
+    })
+];
 
-export const updateCobroConcepto = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { id } = req.params;
-        const { cobro_id, servicio_id, precio_unitario, cantidad, subtotal, consultorio_id } = req.body;
+export const updateCobroConcepto = [
+    validateParams(cobroConceptoIdSchema),
+    validateBody(updateCobroConceptoSchema),
+    asyncHandler(async (req: Request, res: Response) => {
+        const { id } = getValidatedParams(req);
+        const validatedData = getValidatedBody(req);
+        const { cobro_id, servicio_id, precio_unitario, cantidad, subtotal, consultorio_id } = validatedData;
         
         const updateData: any = {};
         
         if (cobro_id) {
             const cobro = await prisma.cobro.findUnique({ where: { id: cobro_id } });
             if (!cobro) {
-                res.status(400).json({ error: 'El cobro especificado no existe' });
-                return;
+                throw createNotFoundError('El cobro especificado no existe');
             }
             updateData.cobro_id = cobro_id;
         }
@@ -105,8 +102,7 @@ export const updateCobroConcepto = async (req: Request, res: Response): Promise<
         if (servicio_id) {
             const servicio = await prisma.servicio.findUnique({ where: { id: servicio_id } });
             if (!servicio) {
-                res.status(400).json({ error: 'El servicio especificado no existe' });
-                return;
+                throw createNotFoundError('El servicio especificado no existe');
             }
             updateData.servicio_id = servicio_id;
         }
@@ -126,8 +122,7 @@ export const updateCobroConcepto = async (req: Request, res: Response): Promise<
         if (consultorio_id) {
             const consultorio = await prisma.consultorio.findUnique({ where: { id: consultorio_id } });
             if (!consultorio) {
-                res.status(400).json({ error: 'El consultorio especificado no existe' });
-                return;
+                throw createNotFoundError('El consultorio especificado no existe');
             }
             updateData.consultorio_id = consultorio_id;
         }
@@ -138,21 +133,16 @@ export const updateCobroConcepto = async (req: Request, res: Response): Promise<
         });
         
         res.json(concepto);
-    } catch (error) {
-        console.error('Error updating cobro concepto:', error);
-        res.status(404).json({ error: 'CobroConcepto no encontrado' });
-    }
-};
+    })
+];
 
-export const deleteCobroConcepto = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { id } = req.params;
+export const deleteCobroConcepto = [
+    validateParams(cobroConceptoIdSchema),
+    asyncHandler(async (req: Request, res: Response) => {
+        const { id } = getValidatedParams(req);
         
         await prisma.cobroConcepto.delete({ where: { id } });
         
         res.json({ message: 'CobroConcepto eliminado' });
-    } catch (error) {
-        console.error('Error deleting cobro concepto:', error);
-        res.status(404).json({ error: 'CobroConcepto no encontrado' });
-    }
-}; 
+    })
+]; 

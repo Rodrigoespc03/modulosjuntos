@@ -11,6 +11,8 @@ import PacienteSearch from "./PacienteSearch";
 import TableFilters from "./TableFilters";
 import { exportToPDF, exportToExcel, formatCobrosForExport } from "../services/exportService";
 import ConceptoSearch from "./ConceptoSearch";
+import { FaExclamationTriangle } from "react-icons/fa";
+import { usePermisos, ConditionalRender } from '../hooks/usePermisos';
 
 const conceptoSchema = z.object({
   conceptoId: z.string().min(1, "Selecciona un concepto"),
@@ -34,13 +36,19 @@ const cobroSchema = z.object({
 type CobroForm = z.infer<typeof cobroSchema>;
 
 function getToday() {
-  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Mexico_City' });
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 export default function Cobros({ embedded = false }: { embedded?: boolean }) {
   const [open, setOpen] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const { servicios, loading } = useConceptos();
+  const { permisos, rol } = usePermisos();
+  
   const {
     register,
     handleSubmit,
@@ -77,6 +85,22 @@ export default function Cobros({ embedded = false }: { embedded?: boolean }) {
 
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Limpiar mensajes automáticamente después de 5 segundos
+  useEffect(() => {
+    if (successMsg) {
+      const timer = setTimeout(() => setSuccessMsg(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMsg]);
+
+  useEffect(() => {
+    if (errorMsg) {
+      const timer = setTimeout(() => setErrorMsg(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMsg]);
+  
   const [pacientes, setPacientes] = useState<any[]>([]);
   const [usuarios, setUsuarios] = useState<any[]>([]);
   const [consultorios, setConsultorios] = useState<any[]>([]);
@@ -94,10 +118,33 @@ export default function Cobros({ embedded = false }: { embedded?: boolean }) {
     getUsuarios().then(setUsuarios);
     getConsultorios().then(setConsultorios);
     getCobros().then((data) => {
+      console.log('Cobros data received:', data);
+      console.log('First cobro:', data[0]);
+      console.log('First cobro paciente:', data[0]?.paciente);
       setCobros(data);
       setFilteredCobros(data);
     });
   }, []);
+
+  // Pre-llenar usuario y consultorio cuando se cargan los datos
+  useEffect(() => {
+    if (usuarios.length > 0 && consultorios.length > 0) {
+      // Obtener el usuario actual del localStorage
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        try {
+          const user = JSON.parse(userData);
+          const currentUser = usuarios.find(u => u.id === user.id);
+          if (currentUser) {
+            setValue('usuario', currentUser.id);
+            setValue('consultorio', currentUser.consultorio_id);
+          }
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+        }
+      }
+    }
+  }, [usuarios, consultorios, setValue]);
 
   const refreshCobros = async () => {
     const data = await getCobros();
@@ -461,29 +508,90 @@ export default function Cobros({ embedded = false }: { embedded?: boolean }) {
         </form>
       )}
       {/* Filtros y tabla de cobros */}
-      <TableFilters
-        pacientes={pacientes}
-        onFiltersChange={handleFiltersChange}
-      />
-      <h3 className="text-lg font-semibold text-gray-900 mt-6">
-        Cobros ({filteredCobros.length} registros)
-      </h3>
+      {!embedded && (
+        <TableFilters
+          pacientes={pacientes}
+          onFiltersChange={handleFiltersChange}
+        />
+      )}
+      
+      {/* Resumen de cobros pendientes cuando está embebido */}
+      {embedded && cobros.filter(c => c.estado === 'PENDIENTE').length > 0 && (
+        <div className="bg-gradient-to-r from-yellow-50 to-orange-50 p-4 rounded-xl border border-yellow-200 mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-yellow-100 rounded-full">
+                <FaExclamationTriangle className="text-yellow-600 text-lg" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-yellow-800">
+                  Cobros Pendientes Requieren Atención
+                </h4>
+                <p className="text-yellow-700 text-sm">
+                  {cobros.filter(c => c.estado === 'PENDIENTE').length} cobro{cobros.filter(c => c.estado === 'PENDIENTE').length > 1 ? 's' : ''} pendiente{cobros.filter(c => c.estado === 'PENDIENTE').length > 1 ? 's' : ''} por un total de ${cobros.filter(c => c.estado === 'PENDIENTE').reduce((sum, c) => sum + Number(c.monto_total || 0), 0).toFixed(2)}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                const pendientes = cobros.filter(c => c.estado === 'PENDIENTE');
+                setFilteredCobros(pendientes);
+              }}
+              className="bg-yellow-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-yellow-600 transition-colors"
+            >
+              Ver Pendientes
+            </button>
+          </div>
+        </div>
+      )}
+      
+      <div className="flex items-center justify-between mt-6 mb-4">
+        <h3 className="text-lg font-semibold text-gray-900">
+          Cobros ({filteredCobros.length} registros)
+        </h3>
+        
+        {/* Filtros rápidos */}
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              const pendientes = cobros.filter(c => c.estado === 'PENDIENTE');
+              setFilteredCobros(pendientes);
+            }}
+            className={`px-4 py-2 rounded-lg font-medium transition ${
+              filteredCobros.every(c => c.estado === 'PENDIENTE') && filteredCobros.length > 0
+                ? 'bg-red-500 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Pendientes ({cobros.filter(c => c.estado === 'PENDIENTE').length})
+          </button>
+          <button
+            onClick={() => {
+              setFilteredCobros(cobros);
+            }}
+            className="px-4 py-2 rounded-lg font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition"
+          >
+            Todos
+          </button>
+        </div>
+      </div>
       <div className="flex gap-2 mb-4">
-        <Button variant="outline" onClick={handleExportPDF} className="flex items-center gap-2">
+        <Button variant="outline" onClick={handleExportPDF} className="flex items-center gap-2 bg-blue-500 text-white hover:bg-blue-600 border-blue-500">
           📄 PDF
         </Button>
-        <Button variant="outline" onClick={handleExportExcel} className="flex items-center gap-2">
+        <Button variant="outline" onClick={handleExportExcel} className="flex items-center gap-2 bg-green-500 text-white hover:bg-green-600 border-green-500">
           📊 Excel
         </Button>
       </div>
-      <div className="bg-white rounded-2xl shadow-xl overflow-x-auto mt-12">
-        <table className="min-w-full border text-xl">
+      <div className="bg-white rounded-2xl shadow-xl overflow-x-auto mt-12 border border-gray-300">
+        <table className="min-w-full text-xl">
           <thead className="bg-gray-100">
             <tr>
               <th className="px-8 py-5 text-left text-gray-700 uppercase tracking-wider text-lg">Paciente</th>
               <th className="px-8 py-5 text-left text-gray-700 uppercase tracking-wider text-lg">Conceptos</th>
               <th className="px-8 py-5 text-left text-gray-700 uppercase tracking-wider text-lg">Monto</th>
               <th className="px-8 py-5 text-left text-gray-700 uppercase tracking-wider text-lg">Fecha</th>
+              <th className="px-8 py-5 text-left text-gray-700 uppercase tracking-wider text-lg">Estado</th>
               <th className="px-8 py-5 text-left text-gray-700 uppercase tracking-wider text-lg">Método</th>
               <th className="px-8 py-5 text-left text-gray-700 uppercase tracking-wider text-lg">Factura</th>
               <th className="px-8 py-5 text-left text-gray-700 uppercase tracking-wider text-lg">Acciones</th>
@@ -491,7 +599,9 @@ export default function Cobros({ embedded = false }: { embedded?: boolean }) {
           </thead>
           <tbody>
             {filteredCobros.map((cobro) => (
-              <tr key={cobro.id} className="hover:bg-gray-50 transition-colors">
+              <tr key={cobro.id} className={`hover:bg-gray-50 transition-colors ${
+                cobro.estado === 'PENDIENTE' ? 'bg-yellow-50 border-l-4 border-yellow-400' : ''
+              }`}>
                 <td className="px-8 py-5 whitespace-nowrap text-sm text-gray-900">
                   {cobro.paciente?.nombre} {cobro.paciente?.apellido}
                 </td>
@@ -507,12 +617,31 @@ export default function Cobros({ embedded = false }: { embedded?: boolean }) {
                   {cobro.fecha_cobro?.slice(0,10)}
                 </td>
                 <td className="px-8 py-5 whitespace-nowrap">
+                  {cobro.estado === 'PENDIENTE' ? (
+                    <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 animate-pulse">
+                      ⏳ Pendiente
+                    </span>
+                  ) : cobro.estado === 'COMPLETADO' ? (
+                    <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                      ✅ Completado
+                    </span>
+                  ) : cobro.estado === 'CANCELADO' ? (
+                    <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                      ❌ Cancelado
+                    </span>
+                  ) : (
+                    <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                      {cobro.estado || 'Sin estado'}
+                    </span>
+                  )}
+                </td>
+                <td className="px-8 py-5 whitespace-nowrap">
                   {Array.isArray(cobro.metodos_pago) && cobro.metodos_pago.length > 0 ? (
                     <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-[#e3f0fd] text-[#4285f2]">
                       {cobro.metodos_pago.map((mp: any) => mp.metodo_pago).join(', ')}
                     </span>
                   ) : (
-                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-400">-</span>
+                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-black">-</span>
                   )}
                 </td>
                 <td className="px-8 py-5 whitespace-nowrap">
@@ -527,20 +656,98 @@ export default function Cobros({ embedded = false }: { embedded?: boolean }) {
                   )}
                 </td>
                 <td className="px-8 py-5 whitespace-nowrap flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => {
-                    setEditCobro(cobro);
-                    setEditFormOpen(true);
-                  }}>Editar</Button>
-                  <Button variant="destructive" size="sm" onClick={async () => {
-                    if (window.confirm('¿Seguro que deseas eliminar este cobro?')) {
-                      try {
-                        await eliminarCobro(cobro.id);
-                        await refreshCobros();
-                      } catch (e) {
-                        alert('Error al eliminar el cobro');
+                  {cobro.estado === 'PENDIENTE' && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={async () => {
+                        if (window.confirm('¿Marcar este cobro como completado?')) {
+                          try {
+                            console.log('Actualizando cobro:', cobro.id, 'a estado COMPLETADO');
+                            const updateData = {
+                              estado: 'COMPLETADO'
+                            };
+                            console.log('Datos de actualización:', updateData);
+                            const result = await editarCobro(cobro.id, updateData);
+                            console.log('Resultado de actualización:', result);
+                            setSuccessMsg('Cobro marcado como completado exitosamente');
+                            await refreshCobros();
+                          } catch (e: any) {
+                            console.error('Error al actualizar el cobro:', e);
+                            console.error('Error response:', e.response);
+                            console.error('Error message:', e.message);
+                            const errorMessage = e.message || e.response?.data?.error || 'Error al actualizar el cobro';
+                            
+                            // Si es un error de autenticación, mostrar mensaje específico
+                            if (errorMessage.includes('Sesión expirada') || errorMessage.includes('inicia sesión')) {
+                              setErrorMsg('Sesión expirada. Por favor, recarga la página e inicia sesión nuevamente.');
+                            } else {
+                              setErrorMsg(`Error al actualizar el cobro: ${errorMessage}`);
+                            }
+                          }
+                        }
+                      }} 
+                      className="bg-green-500 text-white hover:bg-green-600 border-green-500"
+                    >
+                      ✅ Completar
+                    </Button>
+                  )}
+                  {cobro.estado === 'CANCELADO' && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={async () => {
+                        if (window.confirm('¿Reactivar este cobro como pendiente?')) {
+                          try {
+                            const updateData = {
+                              estado: 'PENDIENTE'
+                            };
+                            await editarCobro(cobro.id, updateData);
+                            setSuccessMsg('Cobro reactivado exitosamente');
+                            await refreshCobros();
+                          } catch (e: any) {
+                            console.error('Error al reactivar el cobro:', e);
+                            const errorMessage = e.message || e.response?.data?.error || 'Error al reactivar el cobro';
+                            setErrorMsg(errorMessage);
+                          }
+                        }
+                      }} 
+                      className="bg-blue-500 text-white hover:bg-blue-600 border-blue-500"
+                    >
+                      🔄 Reactivar
+                    </Button>
+                  )}
+                  <ConditionalRender condition={permisos?.puede_editar_cobros || false}>
+                    <Button variant="outline" size="sm" onClick={() => {
+                      setEditCobro(cobro);
+                      setEditFormOpen(true);
+                    }} className="bg-blue-500 text-white hover:bg-blue-600 border-blue-500">Editar</Button>
+                  </ConditionalRender>
+                  <ConditionalRender condition={permisos?.puede_eliminar_cobros || false}>
+                    <Button variant="destructive" size="sm" onClick={async () => {
+                      if (window.confirm('¿Seguro que deseas eliminar este cobro?')) {
+                        try {
+                          console.log('Eliminando cobro:', cobro.id);
+                          const result = await eliminarCobro(cobro.id);
+                          console.log('Resultado de eliminación:', result);
+                          setSuccessMsg('Cobro eliminado exitosamente');
+                          await refreshCobros();
+                        } catch (e: any) {
+                          console.error('Error al eliminar el cobro:', e);
+                          console.error('Error response:', e.response);
+                          console.error('Error message:', e.message);
+                          const errorMessage = e.message || e.response?.data?.error || 'Error al eliminar el cobro';
+                          
+                          // Si es un error de autenticación, mostrar mensaje específico
+                          if (errorMessage.includes('Sesión expirada') || errorMessage.includes('inicia sesión')) {
+                            setErrorMsg('Sesión expirada. Por favor, recarga la página e inicia sesión nuevamente.');
+                          } else {
+                            setErrorMsg(`Error al eliminar el cobro: ${errorMessage}`);
+                          }
+                        }
                       }
-                    }
-                  }}>Eliminar</Button>
+                    }} className="bg-red-500 text-white hover:bg-red-600">Eliminar</Button>
+                  </ConditionalRender>
                 </td>
               </tr>
             ))}
@@ -548,11 +755,11 @@ export default function Cobros({ embedded = false }: { embedded?: boolean }) {
         </table>
         {filteredCobros.length === 0 && (
           <div className="text-center py-12">
-            <div className="text-gray-500 text-xl mb-2">📅</div>
-            <p className="text-gray-600 text-lg font-medium">
+                    <div className="text-black text-xl mb-2">📅</div>
+        <p className="text-black text-lg font-medium">
               No se encontraron cobros en el rango de fechas seleccionado
             </p>
-            <p className="text-gray-500 text-base mt-1">
+            <p className="text-black text-base mt-1">
               Intenta cambiar las fechas o agregar un nuevo cobro
             </p>
           </div>
@@ -565,7 +772,21 @@ export default function Cobros({ embedded = false }: { embedded?: boolean }) {
       )}
       {errorMsg && (
         <div className="fixed bottom-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg animate-in slide-in-from-right-2 duration-300">
-          ❌ {errorMsg}
+          <div className="flex items-center gap-2">
+            <span>❌ {errorMsg}</span>
+            {errorMsg.includes('Sesión expirada') && (
+              <button 
+                onClick={() => {
+                  localStorage.removeItem('token');
+                  localStorage.removeItem('user');
+                  window.location.reload();
+                }}
+                className="bg-white text-red-500 px-3 py-1 rounded text-sm font-bold hover:bg-gray-100"
+              >
+                Reiniciar Sesión
+              </button>
+            )}
+          </div>
         </div>
       )}
       {editFormOpen && editCobro && (

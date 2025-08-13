@@ -1,121 +1,213 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import asyncHandler from '../utils/asyncHandler';
+import { 
+  createPacienteSchema, 
+  updatePacienteSchema, 
+  pacienteIdSchema
+} from '../schemas/validationSchemas';
+import { validateBody, validateParams, getValidatedBody, getValidatedParams } from '../middleware/validation';
+import { createNotFoundError, createConflictError } from '../middleware/errorHandler';
 
 const prisma = new PrismaClient();
 
-export async function getAllPacientes(req: Request, res: Response) {
-  try {
-    const pacientes = await prisma.paciente.findMany();
-    res.json(pacientes);
-  } catch (error: any) {
-    console.error('Error en getAllPacientes:', error);
-    res.status(500).json({ error: error.message });
-  }
-}
+export const getAllPacientes = asyncHandler(async (req: Request, res: Response) => {
+  // Aplicar filtro multi-tenant si está disponible
+  const tenantFilter = (req as any).tenantFilter;
+  
+  const pacientes = await prisma.paciente.findMany({
+    where: tenantFilter ? {
+      organizacion_id: tenantFilter.organizacion_id
+    } : {},
+  });
+  res.json(pacientes);
+});
 
-export async function getPacienteById(req: Request, res: Response) {
-  try {
-    const { id } = req.params;
+export const getPacienteById = [
+  validateParams(pacienteIdSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { id } = getValidatedParams(req);
     const paciente = await prisma.paciente.findUnique({ where: { id } });
-    if (!paciente) return res.status(404).json({ error: 'Paciente no encontrado' });
+    
+    if (!paciente) {
+      throw createNotFoundError('Paciente no encontrado');
+    }
+    
     res.json(paciente);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
-}
+  })
+];
 
-export async function createPaciente(req: Request, res: Response) {
-  console.log('Body recibido en createPaciente:', req.body);
-  try {
-    const { nombre, apellido, fecha_nacimiento, genero, telefono, email } = req.body;
-    // Validar campos requeridos
-    if (!nombre || !apellido || !fecha_nacimiento || !genero || !telefono || !email) {
-      return res.status(400).json({ error: 'Faltan campos requeridos' });
+export const createPaciente = [
+  validateBody(createPacienteSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const validatedData = getValidatedBody(req);
+    const organizacion_id = (req as any).user?.organizacion_id;
+    
+    if (!organizacion_id) {
+      throw createNotFoundError('Usuario no tiene organización asignada');
     }
 
-    // Verificar duplicados por email o teléfono
+    // Verificar duplicados por email
     const existing = await prisma.paciente.findFirst({
       where: {
-        OR: [
-          { email: email },
-          { telefono: telefono }
-        ]
+        email: validatedData.email,
+        organizacion_id: organizacion_id
       }
     });
+    
     if (existing) {
-      return res.status(400).json({ error: 'Ya existe un paciente con ese email o teléfono.' });
+      throw createConflictError('Ya existe un paciente con ese email');
     }
 
     const paciente = await prisma.paciente.create({
       data: {
-        nombre,
-        apellido,
-        fecha_nacimiento: new Date(fecha_nacimiento),
-        genero,
-        telefono,
-        email,
+        ...validatedData,
+        fecha_nacimiento: new Date(validatedData.fecha_nacimiento),
+        organizacion_id,
       },
     });
-    res.json(paciente);
-  } catch (error: any) {
-    console.error('Error en createPaciente:', error);
-    res.status(400).json({ error: error.message });
-  }
-}
 
-export async function updatePaciente(req: Request, res: Response) {
-  try {
-    const { id } = req.params;
-    const { nombre, fecha_nacimiento, genero, direccion, telefono, email, documento_identidad } = req.body;
-    
-    const updateData: any = {};
-    if (nombre) updateData.nombre = nombre;
-    if (fecha_nacimiento) updateData.fecha_nacimiento = new Date(fecha_nacimiento);
-    if (genero) updateData.genero = genero;
-    if (direccion) updateData.direccion = direccion;
-    if (telefono) updateData.telefono = telefono;
-    if (email) updateData.email = email;
-    if (documento_identidad) updateData.documento_identidad = documento_identidad;
+    res.status(201).json(paciente);
+  })
+];
+
+export const updatePaciente = [
+  validateParams(pacienteIdSchema),
+  validateBody(updatePacienteSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { id } = getValidatedParams(req);
+    const validatedData = getValidatedBody(req);
+    const organizacion_id = (req as any).user?.organizacion_id;
+
+    // Verificar que el paciente existe
+    const existingPaciente = await prisma.paciente.findUnique({
+      where: { id }
+    });
+
+    if (!existingPaciente) {
+      throw createNotFoundError('Paciente no encontrado');
+    }
+
+    // Si se está actualizando el email, verificar que no esté duplicado
+    if (validatedData.email && validatedData.email !== existingPaciente.email) {
+      const emailExists = await prisma.paciente.findFirst({
+        where: {
+          email: validatedData.email,
+          organizacion_id: organizacion_id,
+          id: { not: id }
+        }
+      });
+
+      if (emailExists) {
+        throw createConflictError('Ya existe un paciente con ese email');
+      }
+    }
+
+    // Preparar datos para actualización
+    const updateData: any = { ...validatedData };
+    if (validatedData.fecha_nacimiento) {
+      updateData.fecha_nacimiento = new Date(validatedData.fecha_nacimiento);
+    }
 
     const paciente = await prisma.paciente.update({
       where: { id },
       data: updateData,
     });
+
     res.json(paciente);
-  } catch (error: any) {
-    res.status(404).json({ error: 'Paciente no encontrado' });
-  }
-}
+  })
+];
 
-export async function deletePaciente(req: Request, res: Response) {
-  try {
-    const { id } = req.params;
-    await prisma.paciente.delete({ where: { id } });
-    res.json({ message: 'Paciente eliminado' });
-  } catch (error: any) {
-    res.status(404).json({ error: 'Paciente no encontrado' });
-  }
-} 
+export const deletePaciente = [
+  validateParams(pacienteIdSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { id } = getValidatedParams(req);
 
-export async function searchPacientes(req: Request, res: Response) {
-  try {
-    const { q } = req.query;
-    if (!q || typeof q !== 'string' || q.trim().length < 2) {
-      return res.status(400).json({ error: 'Query demasiado corto' });
+    // Verificar que el paciente existe
+    const paciente = await prisma.paciente.findUnique({
+      where: { id }
+    });
+
+    if (!paciente) {
+      throw createNotFoundError('Paciente no encontrado');
     }
+
+    await prisma.paciente.delete({
+      where: { id }
+    });
+
+    res.status(204).send();
+  })
+];
+
+export const searchPacientes = asyncHandler(async (req: Request, res: Response) => {
+  const { search } = req.query;
+  const organizacion_id = (req as any).user?.organizacion_id;
+
+  if (!organizacion_id) {
+    throw createNotFoundError('Usuario no tiene organización asignada');
+  }
+
+  const whereClause: any = {
+    organizacion_id: organizacion_id
+  };
+
+  if (search) {
+    whereClause.OR = [
+      { nombre: { contains: search as string, mode: 'insensitive' } },
+      { apellido: { contains: search as string, mode: 'insensitive' } },
+      { email: { contains: search as string, mode: 'insensitive' } },
+      { telefono: { contains: search as string, mode: 'insensitive' } }
+    ];
+  }
+
+  const pacientes = await prisma.paciente.findMany({
+    where: whereClause,
+    orderBy: { nombre: 'asc' }
+  });
+
+  res.json(pacientes);
+});
+
+export const getPacientesByConsultorio = [
+  validateParams(pacienteIdSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { id: consultorioId } = getValidatedParams(req);
+
+    // Verificar que el consultorio existe
+    const consultorio = await prisma.consultorio.findUnique({
+      where: { id: consultorioId }
+    });
+
+    if (!consultorio) {
+      throw createNotFoundError('Consultorio no encontrado');
+    }
+
+    // Obtener pacientes que han tenido citas en este consultorio
     const pacientes = await prisma.paciente.findMany({
       where: {
-        OR: [
-          { nombre: { contains: q } },
-          { apellido: { contains: q } },
-        ],
+        citas: {
+          some: {
+            consultorio_id: consultorioId
+          }
+        }
       },
-      orderBy: [{ nombre: 'asc' }, { apellido: 'asc' }],
-      take: 10,
+      include: {
+        citas: {
+          where: {
+            consultorio_id: consultorioId
+          },
+          orderBy: {
+            fecha_inicio: 'desc'
+          },
+          take: 1
+        }
+      },
+      orderBy: {
+        nombre: 'asc'
+      }
     });
+
     res.json(pacientes);
-  } catch (error: any) {
-    console.error('Error en searchPacientes:', error);
-    res.status(500).json({ error: error.message });
-  }
-} 
+  })
+]; 

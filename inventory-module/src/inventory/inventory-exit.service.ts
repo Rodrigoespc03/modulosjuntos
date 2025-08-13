@@ -37,19 +37,19 @@ export class InventoryExitService {
       }
 
       const availableStock = product.stocks.find(stock => {
-        const stockQty = stock.quantity instanceof Decimal ? stock.quantity.toNumber() : Number(stock.quantity);
+        const stockQty = Number(stock.quantity);
         return stockQty >= usage.quantity;
       });
       
       if (!availableStock) {
         const totalAvailable = product.stocks.reduce((sum, stock) => {
-          const stockQty = stock.quantity instanceof Decimal ? stock.quantity.toNumber() : Number(stock.quantity);
+          const stockQty = Number(stock.quantity);
           return sum + stockQty;
         }, 0);
         throw new BadRequestException(`Insufficient stock for product ${product.name}. Available: ${totalAvailable}, Requested: ${usage.quantity}`);
       }
 
-      const newQuantity = (availableStock.quantity instanceof Decimal ? availableStock.quantity.toNumber() : Number(availableStock.quantity)) - usage.quantity;
+      const newQuantity = Number(availableStock.quantity) - usage.quantity;
       await this.prisma.stockBySede.update({
         where: { id: availableStock.id },
         data: { quantity: newQuantity },
@@ -93,7 +93,7 @@ export class InventoryExitService {
       const category = exit.product.category || 'Sin categoría'
       const existing = categoryMap.get(category) || { totalQuantity: 0, totalValue: 0, products: [] }
       const quantity = Number(exit.quantity)
-      const value = exit.totalCost instanceof Decimal ? exit.totalCost.toNumber() : Number(exit.totalCost)
+      const value = Number(exit.totalCost)
       // Buscar si el producto ya está en la lista
       const prodIndex = existing.products.findIndex(p => p.name === exit.product.name)
       if (prodIndex >= 0) {

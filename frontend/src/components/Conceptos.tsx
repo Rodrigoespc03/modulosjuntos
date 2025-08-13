@@ -84,7 +84,8 @@ export default function Conceptos({ embedded = false }: { embedded?: boolean }) 
       {loading && <div className="mb-4 text-blue-600">Cargando conceptos...</div>}
       {error && <div className="mb-4 text-red-600">{error}</div>}
       <div className="bg-white rounded-2xl shadow-xl overflow-x-auto mt-12">
-        <table className="min-w-full border text-xl">
+        <div className="max-h-[600px] overflow-y-auto">
+          <table className="min-w-full border text-xl">
           <thead className="bg-gray-100">
             <tr>
               <th className="border px-8 py-5 text-gray-700 text-lg">ID</th>
@@ -119,6 +120,7 @@ export default function Conceptos({ embedded = false }: { embedded?: boolean }) 
             ))}
           </tbody>
         </table>
+        </div>
       </div>
       {/* Modal de alta */}
       <Dialog open={showForm} onOpenChange={v => !v ? setShowForm(false) : null}>

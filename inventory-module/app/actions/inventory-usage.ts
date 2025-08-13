@@ -200,7 +200,7 @@ export const processInventoryUsage = action
       // 3. Llamar al backend si hay productos válidos
       if (backendItems.length > 0) {
         try {
-          const backendUrl = process.env.BACKEND_URL || 'http://localhost:3000'
+          const backendUrl = process.env.BACKEND_URL || '/api'
           const backendPayload = {
             sedeId,
             userId,

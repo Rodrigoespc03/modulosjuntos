@@ -1,55 +1,99 @@
-import { useState } from "react";
-import axios from "axios";
-import Logo from "../components/Logo";
+import { useState } from 'react';
+import axios from 'axios';
 
-export default function Login({ onLogin }: { onLogin: () => void }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+export default function Login() {
+  const [email, setEmail] = useState('rodrigoespc03@gmail.com');
+  const [password, setPassword] = useState('123456');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setLoading(true);
+    setError('');
+
     try {
-      const res = await axios.post("/api/login", { email, password });
-      localStorage.setItem("token", res.data.token);
-      onLogin();
-    } catch (err: any) {
-      setError(err.response?.data?.error || "Error de login");
+      const response = await axios.post('/api/login', {
+        email,
+        password
+      });
+
+      const { token, user } = response.data;
+      
+      // Guardar token y usuario en localStorage
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      
+      // Redirigir al dashboard
+      window.location.href = '/';
+    } catch (error: any) {
+      console.error('Error de login:', error);
+      setError(error.response?.data?.error || 'Error al iniciar sesión');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#2d3748]">
-      <div className="flex flex-col items-center mt-12">
-        <Logo size="xl" className="mb-6" />
-        <h1 className="text-3xl font-bold text-white mb-6 drop-shadow-lg">Bienvenido a ProCura</h1>
-      </div>
-      <div className="flex justify-center mt-10">
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-col gap-4 bg-white p-10 rounded-xl shadow-2xl w-full max-w-sm"
-        >
-          <input
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            placeholder="Email"
-            className="border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-900 placeholder:text-gray-500"
-          />
-          <input
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            type="password"
-            placeholder="Contraseña"
-            className="border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-900 placeholder:text-gray-500"
-          />
-          <button
-            type="submit"
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded transition-colors"
-          >
-            Entrar
-          </button>
-          {error && <div className="text-red-600 text-center font-semibold">{error}</div>}
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            Bienvenido a ProCura
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Sistema de Gestión de Cobros
+          </p>
+        </div>
+        <form className="mt-8 space-y-6" onSubmit={handleLogin}>
+          <div className="rounded-md shadow-sm -space-y-px">
+            <div>
+              <label htmlFor="email" className="sr-only">
+                Email
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="sr-only">
+                Contraseña
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                placeholder="Contraseña"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {error && (
+            <div className="text-red-600 text-sm text-center">
+              {error}
+            </div>
+          )}
+
+          <div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            >
+              {loading ? 'Iniciando sesión...' : 'Entrar'}
+            </button>
+          </div>
         </form>
       </div>
     </div>

@@ -1,6 +1,12 @@
 import { Request, Response } from 'express';
 import { processInventoryUsage } from '../services/inventoryService';
 import { PrismaClient, MovementType } from '@prisma/client';
+import asyncHandler from '../utils/asyncHandler';
+import { 
+  inventoryExitSchema,
+  inventoryQuerySchema
+} from '../schemas/validationSchemas';
+import { validateBody, validateQuery, getValidatedBody, getValidatedQuery } from '../middleware/validation';
 
 const prisma = new PrismaClient();
 
@@ -61,32 +67,31 @@ function adaptFrontendData(frontendData: any) {
   };
 }
 
-export const registerInventoryExit = async (req: Request, res: Response) => {
-  try {
+export const registerInventoryExit = [
+  validateBody(inventoryExitSchema),
+  asyncHandler(async (req: Request, res: Response) => {
     console.log('📥 Received data from frontend:', req.body);
     // Adaptar los datos del frontend al formato del backend
-    const adaptedData = adaptFrontendData(req.body);
+    const adaptedData = adaptFrontendData(getValidatedBody(req));
     console.log('🔄 Adapted data for backend:', adaptedData);
     const result = await processInventoryUsage(adaptedData);
     return res.status(201).json({ success: true, data: result });
-  } catch (error) {
-    console.error('Error en registerInventoryExit:', error);
-    return res.status(400).json({ success: false, error: error instanceof Error ? error.message : 'Unexpected error' });
-  }
-};
+  })
+];
 
 // Endpoint para obtener entradas de inventario agrupadas por categoría
-export async function getInventoryEntriesByCategory(req: Request, res: Response) {
-  try {
-    // Asegura que sedeId sea string
-    const sedeId = typeof req.query.sedeId === 'string' ? req.query.sedeId : undefined;
-    const from = typeof req.query.from === 'string' ? req.query.from : undefined;
-    const to = typeof req.query.to === 'string' ? req.query.to : undefined;
+export const getInventoryEntriesByCategory = [
+  validateQuery(inventoryQuerySchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const validatedQuery = getValidatedQuery(req);
+    const { sedeId, from, to } = validatedQuery;
+    
     const where = {
       type: MovementType.ENTRY,
       ...(sedeId ? { sedeId } : {}),
       ...(from && to ? { createdAt: { gte: new Date(from), lte: new Date(to) } } : {}),
     };
+    
     // Trae todos los movimientos tipo ENTRY con producto
     const entries = await prisma.movement.findMany({
       where,
@@ -95,6 +100,7 @@ export async function getInventoryEntriesByCategory(req: Request, res: Response)
       },
       orderBy: { createdAt: 'desc' }
     }) as any[];
+    
     // Agrupa por categoría
     const grouped: { [key: string]: any } = {};
     for (const entry of entries) {
@@ -116,26 +122,25 @@ export async function getInventoryEntriesByCategory(req: Request, res: Response)
         createdAt: entry.createdAt
       });
     }
+    
     // Si no hay datos, devuelve array vacío
     res.json(Object.values(grouped));
-  } catch (error) {
-    console.error('Error en getInventoryEntriesByCategory:', error);
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Unexpected error' });
-  }
-}
+  })
+];
 
 // Endpoint para obtener salidas de inventario agrupadas por categoría
-export async function getInventoryExitsByCategory(req: Request, res: Response) {
-  try {
-    // Asegura que sedeId sea string
-    const sedeId = typeof req.query.sedeId === 'string' ? req.query.sedeId : undefined;
-    const from = typeof req.query.from === 'string' ? req.query.from : undefined;
-    const to = typeof req.query.to === 'string' ? req.query.to : undefined;
+export const getInventoryExitsByCategory = [
+  validateQuery(inventoryQuerySchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const validatedQuery = getValidatedQuery(req);
+    const { sedeId, from, to } = validatedQuery;
+    
     const where = {
       type: MovementType.EXIT,
       ...(sedeId ? { sedeId } : {}),
       ...(from && to ? { createdAt: { gte: new Date(from), lte: new Date(to) } } : {}),
     };
+    
     // Trae todos los movimientos tipo EXIT con producto
     const exits = await prisma.movement.findMany({
       where,
@@ -144,6 +149,7 @@ export async function getInventoryExitsByCategory(req: Request, res: Response) {
       },
       orderBy: { createdAt: 'desc' }
     }) as any[];
+    
     // Agrupa por categoría
     const grouped: { [key: string]: any } = {};
     for (const exit of exits) {
@@ -164,9 +170,7 @@ export async function getInventoryExitsByCategory(req: Request, res: Response) {
         totalValue: Number(exit.totalCost)
       });
     }
+    
     res.json(Object.values(grouped));
-  } catch (error) {
-    console.error('Error en getInventoryExitsByCategory:', error);
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Unexpected error' });
-  }
-} 
+  })
+]; 

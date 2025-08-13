@@ -68,15 +68,19 @@ export default function TableFilters({ pacientes, onFiltersChange }: TableFilter
   return (
     <div className="bg-white p-4 rounded-lg shadow mb-6">
       <h3 className="text-lg font-semibold mb-4">Filtros</h3>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-2">Paciente</label>
-          <PacienteSearch
-            pacientes={pacientes}
-            onPacienteSelect={handlePacienteSelect}
-            placeholder="Buscar paciente..."
-          />
-        </div>
+      
+      {/* Primera fila: Campo de Paciente */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-2">Paciente</label>
+        <PacienteSearch
+          pacientes={pacientes}
+          onPacienteSelect={handlePacienteSelect}
+          placeholder="Buscar paciente..."
+        />
+      </div>
+      
+      {/* Segunda fila: Campos de fecha */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>
           <label className="block text-sm font-medium mb-2">Fecha desde</label>
           <Input
@@ -96,8 +100,10 @@ export default function TableFilters({ pacientes, onFiltersChange }: TableFilter
           />
         </div>
       </div>
-      <div className="mt-4 flex justify-end">
-        <Button variant="outline" onClick={clearFilters}>
+      
+      {/* Botón de limpiar filtros */}
+      <div className="flex justify-end">
+        <Button variant="outline" onClick={clearFilters} className="bg-gray-500 text-white hover:bg-gray-600 border-gray-500">
           Limpiar filtros
         </Button>
       </div>

@@ -3,6 +3,20 @@ import { PrismaClient, Rol, EstadoCobro, MetodoPago } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
+  // 0. Organización por defecto
+  let organizacion = await prisma.organizaciones.findFirst({ where: { nombre: 'Organización Demo' } });
+  if (!organizacion) {
+    organizacion = await prisma.organizaciones.create({
+      data: {
+        nombre: 'Organización Demo',
+        ruc: '12345678901',
+        direccion: 'Dirección Demo',
+        telefono: '555-0000',
+        email: 'demo@organizacion.com',
+      },
+    });
+  }
+
   // 1. Consultorio
   let consultorio = await prisma.consultorio.findFirst({ where: { nombre: 'Consultorio Demo' } });
   if (!consultorio) {
@@ -10,6 +24,7 @@ async function main() {
       data: {
         nombre: 'Consultorio Demo',
         direccion: 'Calle Falsa 123',
+        organizacion_id: organizacion.id,
       },
     });
   }
@@ -25,6 +40,7 @@ async function main() {
         telefono: '555-1234',
         rol: 'ADMINISTRADOR',
         consultorio_id: consultorio.id,
+        organizacion_id: organizacion.id,
       },
     });
   }
@@ -41,6 +57,7 @@ async function main() {
         direccion: 'Calle Paciente 456',
         telefono: '555-5678',
         email: 'paciente@demo.com',
+        organizacion_id: organizacion.id,
       },
     });
   }
@@ -53,6 +70,7 @@ async function main() {
         nombre: 'Consulta General',
         descripcion: 'Consulta médica general',
         precio_base: 500,
+        organizacion_id: organizacion.id,
       },
     });
   }
@@ -95,7 +113,7 @@ async function main() {
       },
       historial: {
         create: [{
-          detalles_antes: null,
+          detalles_antes: undefined,
           detalles_despues: 'Cobro creado',
           tipo_cambio: 'CREACION',
           usuario_id: usuario.id,

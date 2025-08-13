@@ -66,7 +66,7 @@ export default function InventoryEntryPage() {
           </div>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Registrar Entrada de Inventario</h1>
-            <p className="text-gray-600">Agregar nuevos productos al inventario clínico</p>
+            <p className="text-black">Agregar nuevos productos al inventario clínico</p>
           </div>
         </div>
         
@@ -77,10 +77,10 @@ export default function InventoryEntryPage() {
       {/* Resumen de entradas por categoría */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-gray-800 mb-4">Detalle de Entradas por Categoría</h2>
-        {loading && <div className="text-gray-500">Cargando...</div>}
+        {loading && <div className="text-black">Cargando...</div>}
         {error && <div className="text-red-500">{error}</div>}
         {!loading && !error && entriesByCategory.length === 0 && (
-          <div className="text-gray-500">No hay entradas registradas en este periodo.</div>
+          <div className="text-black">No hay entradas registradas en este periodo.</div>
         )}
         {!loading && !error && entriesByCategory.length > 0 && (
           <div className="space-y-8">
@@ -136,7 +136,7 @@ export default function InventoryEntryPage() {
             <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
               <div className="mb-6">
                 <h2 className="text-xl font-semibold text-gray-900 mb-2">Información del Producto</h2>
-                <p className="text-gray-600">Completa los datos del producto que deseas agregar</p>
+                <p className="text-black">Completa los datos del producto que deseas agregar</p>
               </div>
               <InventoryEntryForm />
             </div>

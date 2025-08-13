@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<datos_formulario_cobros>
+  
+  <!-- DATOS QUE ENVIAMOS CUANDO SE COMPLETA EL FORMULARIO -->
+  
+  <datos_cobro>
+    <!-- DATOS BÁSICOS -->
+    <campo nombre="paciente_id" tipo="UUID"/>
+    <campo nombre="fecha" tipo="Date"/>
+    <campo nombre="usuario_id" tipo="UUID"/>
+    <campo nombre="consultorio_id" tipo="UUID"/>
+    <campo nombre="pidioFactura" tipo="Boolean"/>
+    
+    <!-- CONCEPTOS COBRADOS -->
+    <conceptos tipo="Array">
+      <concepto>
+        <campo nombre="conceptoId" tipo="UUID"/>
+        <campo nombre="precio_unitario" tipo="Float"/>
+        <campo nombre="cantidad" tipo="Integer"/>
+        <campo nombre="subtotal" tipo="Float"/>
+      </concepto>
+    </conceptos>
+    
+    <!-- MÉTODOS DE PAGO -->
+    <pagos tipo="Array">
+      <pago>
+        <campo nombre="metodo" tipo="String" valores="EFECTIVO,TARJETA_DEBITO,TARJETA_CREDITO,TRANSFERENCIA,OTRO"/>
+        <campo nombre="monto" tipo="Float"/>
+      </pago>
+    </pagos>
+    
+    <!-- TOTALES -->
+    <campo nombre="monto_total" tipo="Float"/>
+    
+  </datos_cobro>
+  
+</datos_formulario_cobros>

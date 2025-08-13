@@ -40,9 +40,9 @@ export function InventoryMetricsWithModal({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Inventario por Categoría con interactividad */}
-      <div className="bg-white rounded-2xl shadow-2xl p-8">
+      <div className="bg-white rounded-2xl shadow-2xl p-6">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-blue-100">
             <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -54,7 +54,7 @@ export function InventoryMetricsWithModal({
             <p className="text-gray-600">Haz clic para ver el detalle de productos</p>
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {inventoryByCategory.map((category, index) => (
             <button
               key={index}

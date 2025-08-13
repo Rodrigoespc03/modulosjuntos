@@ -50,10 +50,6 @@ coverage/
 tmp/
 temp/
 
-# EXCLUIR MÓDULO DE INVENTARIO (para tu compañero)
-inventory-module/
-Inventario/
-
 # Excluir archivos de prueba y desarrollo
 *.test.js
 *.spec.js

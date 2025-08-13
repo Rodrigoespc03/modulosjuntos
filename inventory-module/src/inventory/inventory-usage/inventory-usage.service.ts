@@ -334,7 +334,7 @@ export class InventoryUsageService {
       throw new BadRequestException(`Product ${item.productId} not found`);
     }
 
-    const quantity = new Decimal(item.quantity || 1); // Usar item.quantity en lugar de siempre 1
+    const quantity = Number(item.quantity || 1); // Usar item.quantity en lugar de siempre 1
     await this.processMovement(tx, dto, product, quantity, inventoryUsageId);
   }
 
@@ -342,17 +342,17 @@ export class InventoryUsageService {
     tx: Prisma.TransactionClient,
     dto: ProcessUsageDto,
     product: any,
-    quantity: number | Decimal,
+    quantity: number,
     inventoryUsageId: string
   ) {
     console.log(`🔄 Processing movement for product: ${product.name}, quantity: ${quantity}`);
     
-    const quantityDecimal = typeof quantity === 'number' ? new Decimal(quantity) : quantity;
+    const quantityDecimal = Number(quantity);
     
     await this.validateStock(dto.sedeId, product.id, quantityDecimal);
     const stock = await this.getStockWithExpiry(dto.sedeId, product.id);
     const unitCost = product.costPerUnit;
-    const totalCost = unitCost.mul(quantityDecimal);
+    const totalCost = unitCost * quantityDecimal;
 
     // Crear Movement
     const movement = await tx.movement.create({
@@ -361,9 +361,9 @@ export class InventoryUsageService {
         sedeId: dto.sedeId,
         productId: product.id,
         type: 'EXIT',
-        quantity: quantityDecimal.toNumber(),
-        unitCost: unitCost.toNumber(),
-        totalCost: totalCost.toNumber(),
+        quantity: quantityDecimal,
+        unitCost: unitCost,
+        totalCost: totalCost,
         batchNumber: stock?.batchNumber,
         expiryDate: stock?.expiryDate,
       },
@@ -377,9 +377,9 @@ export class InventoryUsageService {
         inventoryUsageId: inventoryUsageId,
         movementId: movement.id,
         productId: product.id,
-        quantity: quantityDecimal.toNumber(),
-        unitCost: unitCost.toNumber(),
-        totalCost: totalCost.toNumber(),
+        quantity: quantityDecimal,
+        unitCost: unitCost,
+        totalCost: totalCost,
       },
     });
 
@@ -388,19 +388,19 @@ export class InventoryUsageService {
     // Actualizar StockBySede
     await tx.stockBySede.update({
       where: { productId_sedeId: { productId: product.id, sedeId: dto.sedeId } },
-      data: { quantity: { decrement: quantityDecimal.toNumber() } },
+      data: { quantity: { decrement: quantityDecimal } },
     });
 
     // Actualizar ProductExpiration
     if (stock) {
       await tx.productExpiration.update({
         where: { id: stock.id },
-        data: { quantity: { decrement: quantityDecimal.toNumber() } },
+        data: { quantity: { decrement: quantityDecimal } },
       });
     }
   }
 
-  private async validateStock(sedeId: string, productId: string, quantity: Decimal): Promise<void> {
+  private async validateStock(sedeId: string, productId: string, quantity: number): Promise<void> {
     const stock = await this.prisma.stockBySede.findUnique({
       where: {
         productId_sedeId: {
@@ -410,7 +410,7 @@ export class InventoryUsageService {
       },
     });
 
-    if (!stock || stock.quantity.lessThan(quantity)) {
+    if (!stock || Number(stock.quantity) < Number(quantity)) {
       throw new BadRequestException(`Insufficient stock for product ${productId}`);
     }
   }

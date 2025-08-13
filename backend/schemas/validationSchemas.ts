@@ -1,0 +1,517 @@
+
+// ========================================
+// NOTA DE PERFORMANCE
+// ========================================
+// Los siguientes schemas son los más utilizados y han sido optimizados:
+// - usuarioIdSchema: 91 usos - Usa createIdSchema para mejor performance
+// - organizacionIdSchema: 44 usos - Optimizado con schema base
+// - pacienteIdSchema, citaIdSchema, cobroIdSchema: 28-29 usos c/u
+// ========================================
+
+import { z } from 'zod';
+
+// ========================================
+// ENUMS Y TIPOS BASE
+// ========================================
+
+export const RolEnum = z.enum(['DOCTOR', 'SECRETARIA', 'ADMINISTRADOR', 'ENFERMERA', 'PACIENTE']);
+export const EstadoCobroEnum = z.enum(['PENDIENTE', 'COMPLETADO', 'CANCELADO']);
+export const MetodoPagoEnum = z.enum(['EFECTIVO', 'TARJETA_DEBITO', 'TARJETA_CREDITO', 'TRANSFERENCIA', 'OTRO']);
+export const EstadoCitaEnum = z.enum(['PROGRAMADA', 'EN_CURSO', 'COMPLETADA', 'CANCELADA', 'NO_ASISTIO']);
+export const TipoCambioEnum = z.enum(['CREACION', 'EDICION', 'ELIMINACION', 'ACTUALIZACION']);
+
+// ========================================
+// SCHEMAS BASE REUTILIZABLES
+// ========================================
+
+// Schema base para IDs UUID - OPTIMIZADO
+// Reutilizado en todos los schemas de ID para mejor consistencia y performance
+export const uuidSchema = z.string().uuid('El ID debe ser un UUID válido');
+
+// Schema base para IDs con nombre específico
+export const createIdSchema = (name: string) => z.object({
+  id: uuidSchema
+});
+
+// Schema base para paginación
+export const basePaginationSchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(10),
+});
+
+// Schema base para rangos de fechas
+export const baseDateRangeSchema = z.object({
+  dateFrom: z.string().datetime().optional(),
+  dateTo: z.string().datetime().optional(),
+});
+
+// Schema base para búsqueda
+export const baseSearchSchema = z.object({
+  search: z.string().optional(),
+});
+
+// ========================================
+// SCHEMAS DE USUARIOS
+// ========================================
+
+export const createUsuarioSchema = z.object({
+  nombre: z.string()
+    .min(2, 'El nombre debe tener al menos 2 caracteres')
+    .max(100, 'El nombre no puede exceder 100 caracteres'),
+  apellido: z.string()
+    .min(2, 'El apellido debe tener al menos 2 caracteres')
+    .max(100, 'El apellido no puede exceder 100 caracteres'),
+  email: z.string()
+    .email('El email debe tener un formato válido')
+    .max(255, 'El email no puede exceder 255 caracteres'),
+  telefono: z.string()
+    .min(7, 'El teléfono debe tener al menos 7 dígitos')
+    .max(20, 'El teléfono no puede exceder 20 caracteres'),
+  rol: RolEnum,
+  consultorio_id: z.string()
+    .uuid('El ID del consultorio debe ser un UUID válido'),
+  puede_editar_cobros: z.boolean().optional().default(false),
+  puede_eliminar_cobros: z.boolean().optional().default(false),
+  puede_gestionar_usuarios: z.boolean().optional().default(false),
+  puede_ver_historial: z.boolean().optional().default(false),
+});
+
+export const updateUsuarioSchema = createUsuarioSchema.partial();
+
+export const usuarioIdSchema = createIdSchema('usuario');
+
+// ========================================
+// SCHEMAS DE PACIENTES
+// ========================================
+
+export const createPacienteSchema = z.object({
+  nombre: z.string()
+    .min(2, 'El nombre debe tener al menos 2 caracteres')
+    .max(100, 'El nombre no puede exceder 100 caracteres'),
+  apellido: z.string()
+    .min(2, 'El apellido debe tener al menos 2 caracteres')
+    .max(100, 'El apellido no puede exceder 100 caracteres'),
+  fecha_nacimiento: z.string()
+    .datetime('La fecha de nacimiento debe ser una fecha válida')
+    .or(z.date()),
+  genero: z.string()
+    .min(1, 'El género es requerido')
+    .max(20, 'El género no puede exceder 20 caracteres'),
+  telefono: z.string()
+    .min(7, 'El teléfono debe tener al menos 7 dígitos')
+    .max(20, 'El teléfono no puede exceder 20 caracteres'),
+  email: z.string()
+    .email('El email debe tener un formato válido')
+    .max(255, 'El email no puede exceder 255 caracteres'),
+  direccion: z.string().optional(),
+  documento_identidad: z.string().optional(),
+});
+
+export const updatePacienteSchema = createPacienteSchema.partial();
+
+export const pacienteIdSchema = createIdSchema('paciente');
+
+// ========================================
+// SCHEMAS DE CONSULTORIOS
+// ========================================
+
+export const createConsultorioSchema = z.object({
+  nombre: z.string()
+    .min(2, 'El nombre debe tener al menos 2 caracteres')
+    .max(100, 'El nombre no puede exceder 100 caracteres'),
+  direccion: z.string()
+    .min(5, 'La dirección debe tener al menos 5 caracteres')
+    .max(255, 'La dirección no puede exceder 255 caracteres'),
+});
+
+export const updateConsultorioSchema = createConsultorioSchema.partial();
+
+export const consultorioIdSchema = createIdSchema('consultorio');
+
+// ========================================
+// SCHEMAS DE COBROS
+// ========================================
+
+export const createCobroSchema = z.object({
+  paciente_id: z.string().uuid('El ID del paciente debe ser un UUID válido'),
+  consultorio_id: z.string().uuid('El ID del consultorio debe ser un UUID válido'),
+  fecha: z.string().datetime('La fecha debe ser una fecha válida').or(z.date()),
+  monto_total: z.number().positive('El monto total debe ser positivo'),
+  estado: EstadoCobroEnum.default('PENDIENTE'),
+  observaciones: z.string().optional(),
+  pagos: z.array(z.object({
+    metodo: MetodoPagoEnum,
+    monto: z.number().positive('El monto debe ser positivo')
+  })).min(1, 'Debe haber al menos un método de pago')
+}).refine(
+  (data) => {
+    const totalPagos = data.pagos.reduce((sum, pago) => sum + pago.monto, 0);
+    return Math.abs(totalPagos - data.monto_total) < 0.01;
+  },
+  {
+    message: 'La suma de los pagos debe igualar el monto total',
+    path: ['pagos']
+  }
+);
+
+export const updateCobroSchema = createCobroSchema.partial();
+
+export const cobroIdSchema = createIdSchema('cobro');
+
+// ========================================
+// SCHEMAS DE CITAS
+// ========================================
+
+export const createCitaSchema = z.object({
+  paciente_id: z.string().uuid('El ID del paciente debe ser un UUID válido'),
+  consultorio_id: z.string().uuid('El ID del consultorio debe ser un UUID válido'),
+  doctor_id: z.string().uuid('El ID del doctor debe ser un UUID válido'),
+  fecha_hora: z.string().datetime('La fecha y hora debe ser una fecha válida').or(z.date()),
+  duracion: z.number().int().positive('La duración debe ser un número positivo'),
+  estado: EstadoCitaEnum.default('PROGRAMADA'),
+  observaciones: z.string().optional(),
+  tipo_cita: z.string().optional(),
+  precio: z.number().positive('El precio debe ser positivo').optional(),
+});
+
+export const updateCitaSchema = createCitaSchema.partial();
+
+export const citaIdSchema = createIdSchema('cita');
+
+// ========================================
+// SCHEMAS DE SERVICIOS
+// ========================================
+
+export const createServicioSchema = z.object({
+  nombre: z.string()
+    .min(2, 'El nombre debe tener al menos 2 caracteres')
+    .max(100, 'El nombre no puede exceder 100 caracteres'),
+  descripcion: z.string().optional(),
+  precio: z.number().positive('El precio debe ser positivo'),
+  consultorio_id: z.string().uuid('El ID del consultorio debe ser un UUID válido'),
+});
+
+export const updateServicioSchema = createServicioSchema.partial();
+
+export const servicioIdSchema = createIdSchema('servicio');
+
+// ========================================
+// SCHEMAS DE COBRO CONCEPTO
+// ========================================
+
+export const createCobroConceptoSchema = z.object({
+  cobro_id: z.string().uuid('El ID del cobro debe ser un UUID válido'),
+  concepto: z.string().min(1, 'El concepto es requerido'),
+  cantidad: z.number().int().positive('La cantidad debe ser un número positivo'),
+  precio_unitario: z.number().positive('El precio unitario debe ser positivo'),
+  subtotal: z.number().positive('El subtotal debe ser positivo'),
+});
+
+export const updateCobroConceptoSchema = createCobroConceptoSchema.partial();
+
+export const cobroConceptoIdSchema = createIdSchema('cobroConcepto');
+
+// ========================================
+// SCHEMAS DE PRECIOS CONSULTORIO
+// ========================================
+
+export const createPrecioConsultorioSchema = z.object({
+  consultorio_id: z.string().uuid('El ID del consultorio debe ser un UUID válido'),
+  servicio_id: z.string().uuid('El ID del servicio debe ser un UUID válido'),
+  precio: z.number().positive('El precio debe ser positivo'),
+});
+
+export const updatePrecioConsultorioSchema = createPrecioConsultorioSchema.partial();
+
+export const precioConsultorioIdSchema = createIdSchema('precioConsultorio');
+
+// ========================================
+// SCHEMAS DE HISTORIAL COBRO
+// ========================================
+
+export const createHistorialCobroSchema = z.object({
+  cobro_id: z.string().uuid('El ID del cobro debe ser un UUID válido'),
+  tipo_cambio: TipoCambioEnum,
+  descripcion: z.string().min(1, 'La descripción es requerida'),
+  usuario_id: z.string().uuid('El ID del usuario debe ser un UUID válido'),
+});
+
+export const updateHistorialCobroSchema = createHistorialCobroSchema.partial();
+
+export const historialCobroIdSchema = createIdSchema('historialCobro');
+
+// ========================================
+// SCHEMAS DE DISPONIBILIDAD MÉDICO
+// ========================================
+
+export const createDisponibilidadMedicoSchema = z.object({
+  doctor_id: z.string().uuid('El ID del doctor debe ser un UUID válido'),
+  dia_semana: z.number().int().min(0).max(6, 'El día de la semana debe estar entre 0 y 6'),
+  hora_inicio: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Formato de hora inválido (HH:MM)'),
+  hora_fin: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Formato de hora inválido (HH:MM)'),
+  activo: z.boolean().default(true),
+});
+
+export const updateDisponibilidadMedicoSchema = createDisponibilidadMedicoSchema.partial();
+
+export const disponibilidadMedicoIdSchema = createIdSchema('disponibilidadMedico');
+
+// ========================================
+// SCHEMAS DE BLOQUEO MÉDICO
+// ========================================
+
+export const createBloqueoMedicoSchema = z.object({
+  doctor_id: z.string().uuid('El ID del doctor debe ser un UUID válido'),
+  fecha_inicio: z.string().datetime('La fecha de inicio debe ser una fecha válida').or(z.date()),
+  fecha_fin: z.string().datetime('La fecha de fin debe ser una fecha válida').or(z.date()),
+  motivo: z.string().min(1, 'El motivo es requerido'),
+});
+
+export const updateBloqueoMedicoSchema = createBloqueoMedicoSchema.partial();
+
+export const bloqueoMedicoIdSchema = createIdSchema('bloqueoMedico');
+
+// ========================================
+// SCHEMAS DE WHATSAPP
+// ========================================
+
+export const whatsappWebhookSchema = z.object({
+  message: z.string().min(1, 'El mensaje es requerido'),
+  from: z.string().min(1, 'El remitente es requerido'),
+  timestamp: z.string().datetime().optional(),
+});
+
+export const sendTreatmentReminderSchema = z.object({
+  paciente_id: z.string().uuid('El ID del paciente debe ser un UUID válido'),
+  mensaje: z.string().min(1, 'El mensaje es requerido'),
+  fecha_recordatorio: z.string().datetime('La fecha del recordatorio debe ser una fecha válida').or(z.date()),
+});
+
+export const pacienteTreatmentSchema = z.object({
+  paciente_id: z.string().uuid('El ID del paciente debe ser un UUID válido'),
+});
+
+// ========================================
+// SCHEMAS DE ORGANIZACIÓN
+// ========================================
+
+export const createOrganizacionSchema = z.object({
+  nombre: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
+  ruc: z.string().min(11, 'El RUC debe tener 11 dígitos').max(11, 'El RUC debe tener 11 dígitos'),
+  email: z.string().email('El email debe ser válido'),
+  telefono: z.string().min(7, 'El teléfono debe tener al menos 7 dígitos'),
+  direccion: z.string().min(5, 'La dirección debe tener al menos 5 caracteres'),
+  ciudad: z.string().min(2, 'La ciudad debe tener al menos 2 caracteres'),
+});
+
+export const updateOrganizacionSchema = createOrganizacionSchema.partial();
+
+export const organizacionIdSchema = createIdSchema('organizacion');
+
+// ========================================
+// SCHEMAS DE ONBOARDING
+// ========================================
+
+export const registerOrganizationSchema = z.object({
+  // Datos esenciales de la clínica
+  nombre: z.string().min(2, 'Nombre requerido'),
+  ruc: z.string().length(11, 'RUC debe tener 11 dígitos'),
+  email: z.string().email('Email inválido'),
+  telefono: z.string().min(7, 'Teléfono mínimo 7 dígitos'),
+  ciudad: z.string().min(2, 'Ciudad requerida'),
+  
+  // Datos del administrador
+  adminNombre: z.string().min(2, 'Nombre de admin requerido'),
+  adminEmail: z.string().email('Email de admin inválido'),
+  adminPassword: z.string().min(6, 'Contraseña mínimo 6 caracteres'),
+  adminPasswordConfirm: z.string().min(6, 'Confirmación requerida'),
+  
+  // Configuración opcional
+  tipoClinica: z.string().optional(),
+  numMedicos: z.string().optional(),
+  modulos: z.array(z.string()).optional(),
+  plan: z.string().optional()
+}).refine(
+  (data) => data.adminPassword === data.adminPasswordConfirm,
+  { message: 'Las contraseñas no coinciden', path: ['adminPasswordConfirm'] }
+);
+
+export const completeOnboardingStepSchema = z.object({
+  step_id: z.string().min(1, 'El ID del paso es requerido'),
+  completed: z.boolean(),
+  data: z.record(z.string(), z.unknown()).optional(),
+});
+
+export const inviteUsersSchema = z.object({
+  emails: z.array(z.string().email('Email inválido')).min(1, 'Debe incluir al menos un email'),
+  roles: z.array(RolEnum).min(1, 'Debe incluir al menos un rol'),
+  mensaje: z.string().optional(),
+});
+
+export const stepIdSchema = createIdSchema('step');
+
+// ========================================
+// SCHEMAS DE CONFIGURACIÓN DE PERMISOS
+// ========================================
+
+export const createConfiguracionPermisosSchema = z.object({
+  usuario_id: z.string().uuid('El ID del usuario debe ser un UUID válido'),
+  puede_editar_cobros: z.boolean().default(false),
+  puede_eliminar_cobros: z.boolean().default(false),
+  puede_gestionar_usuarios: z.boolean().default(false),
+  puede_ver_historial: z.boolean().default(false),
+});
+
+export const updateConfiguracionPermisosSchema = createConfiguracionPermisosSchema.partial();
+
+// ========================================
+// SCHEMAS DE INVENTARIO
+// ========================================
+
+export const inventoryExitSchema = z.object({
+  nombrePaciente: z.string().min(2, 'El nombre del paciente es requerido'),
+  tipoTratamiento: z.string().min(2, 'El tipo de tratamiento es requerido'),
+  pacienteId: z.string().optional(),
+  observaciones: z.string().optional(),
+  items: z.array(z.object({
+    nombreProducto: z.string().min(1, 'El nombre del producto es requerido'),
+    cantidad: z.number().positive('La cantidad debe ser positiva').optional().default(1),
+  })).min(1, 'Debe especificar al menos un item')
+});
+
+export const inventoryQuerySchema = basePaginationSchema.merge(baseSearchSchema).extend({
+  sedeId: z.string().optional(),
+  from: z.string().datetime().optional(),
+  to: z.string().datetime().optional()
+});
+
+// ========================================
+// SCHEMAS DE HULI
+// ========================================
+
+export const huliPatientIdSchema = z.object({
+  patientId: z.string().min(1, 'El ID del paciente es requerido')
+});
+
+export const huliAppointmentIdSchema = z.object({
+  appointmentId: z.string().min(1, 'El ID de la cita es requerido')
+});
+
+export const huliRecordIdSchema = z.object({
+  recordId: z.string().min(1, 'El ID del registro médico es requerido')
+});
+
+export const huliPatientsQuerySchema = basePaginationSchema.merge(baseSearchSchema).extend({
+  status: z.string().optional(),
+  doctorId: z.string().optional(),
+});
+
+export const huliAppointmentsQuerySchema = basePaginationSchema.merge(baseDateRangeSchema).extend({
+  patientId: z.string().optional(),
+  doctorId: z.string().optional(),
+  status: z.string().optional(),
+});
+
+export const huliMedicalRecordsQuerySchema = basePaginationSchema.merge(baseDateRangeSchema).extend({
+  patientId: z.string().optional(),
+  doctorId: z.string().optional(),
+  type: z.string().optional(),
+});
+
+export const createHuliPatientSchema = z.object({
+  firstName: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
+  lastName: z.string().min(2, 'El apellido debe tener al menos 2 caracteres'),
+  email: z.string().email('El email debe ser válido').optional(),
+  phone: z.string().min(7, 'El teléfono debe tener al menos 7 dígitos').optional(),
+  dateOfBirth: z.string().datetime('La fecha de nacimiento debe ser válida').optional(),
+  gender: z.enum(['M', 'F', 'O']).optional(),
+  address: z.string().optional(),
+  emergencyContact: z.object({
+    name: z.string().optional(),
+    phone: z.string().optional(),
+    relationship: z.string().optional()
+  }).optional()
+});
+
+// Nota: huliPatientSyncSchema y huliAppointmentSyncSchema consolidados con huliPatientIdSchema y huliAppointmentIdSchema respectivamente
+
+// ========================================
+// SCHEMAS DE AUTENTICACIÓN
+// ========================================
+
+export const loginSchema = z.object({
+  email: z.string().email('El email debe tener un formato válido'),
+  password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
+});
+
+export const registerSchema = z.object({
+  nombre: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
+  apellido: z.string().min(2, 'El apellido debe tener al menos 2 caracteres'),
+  email: z.string().email('El email debe tener un formato válido'),
+  password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
+  passwordConfirm: z.string().min(6, 'La confirmación de contraseña debe tener al menos 6 caracteres'),
+  telefono: z.string().min(7, 'El teléfono debe tener al menos 7 dígitos'),
+  rol: RolEnum,
+  consultorio_id: z.string().uuid('El ID del consultorio debe ser un UUID válido'),
+}).refine(
+  (data) => data.password === data.passwordConfirm,
+  {
+    message: 'Las contraseñas no coinciden',
+    path: ['passwordConfirm']
+  }
+);
+
+// ========================================
+// SCHEMAS DE PAGINACIÓN Y BÚSQUEDA
+// ========================================
+
+export const paginationSchema = basePaginationSchema;
+export const dateRangeSchema = baseDateRangeSchema;
+
+// ========================================
+// TIPOS TYPESCRIPT
+// ========================================
+
+export type CreateUsuarioInput = z.infer<typeof createUsuarioSchema>;
+export type UpdateUsuarioInput = z.infer<typeof updateUsuarioSchema>;
+export type CreatePacienteInput = z.infer<typeof createPacienteSchema>;
+export type UpdatePacienteInput = z.infer<typeof updatePacienteSchema>;
+export type CreateCobroInput = z.infer<typeof createCobroSchema>;
+export type UpdateCobroInput = z.infer<typeof updateCobroSchema>;
+export type CreateCitaInput = z.infer<typeof createCitaSchema>;
+export type UpdateCitaInput = z.infer<typeof updateCitaSchema>;
+export type LoginInput = z.infer<typeof loginSchema>;
+export type RegisterInput = z.infer<typeof registerSchema>;
+export type PaginationInput = z.infer<typeof paginationSchema>;
+export type DateRangeInput = z.infer<typeof dateRangeSchema>;
+export type CreateServicioInput = z.infer<typeof createServicioSchema>;
+export type UpdateServicioInput = z.infer<typeof updateServicioSchema>;
+export type CreateConsultorioInput = z.infer<typeof createConsultorioSchema>;
+export type UpdateConsultorioInput = z.infer<typeof updateConsultorioSchema>;
+export type CreateCobroConceptoInput = z.infer<typeof createCobroConceptoSchema>;
+export type UpdateCobroConceptoInput = z.infer<typeof updateCobroConceptoSchema>;
+export type CreatePrecioConsultorioInput = z.infer<typeof createPrecioConsultorioSchema>;
+export type UpdatePrecioConsultorioInput = z.infer<typeof updatePrecioConsultorioSchema>;
+export type CreateHistorialCobroInput = z.infer<typeof createHistorialCobroSchema>;
+export type UpdateHistorialCobroInput = z.infer<typeof updateHistorialCobroSchema>;
+export type CreateDisponibilidadMedicoInput = z.infer<typeof createDisponibilidadMedicoSchema>;
+export type UpdateDisponibilidadMedicoInput = z.infer<typeof updateDisponibilidadMedicoSchema>;
+export type CreateBloqueoMedicoInput = z.infer<typeof createBloqueoMedicoSchema>;
+export type UpdateBloqueoMedicoInput = z.infer<typeof updateBloqueoMedicoSchema>;
+export type CreateOrganizacionInput = z.infer<typeof createOrganizacionSchema>;
+export type UpdateOrganizacionInput = z.infer<typeof updateOrganizacionSchema>;
+export type RegisterOrganizationInput = z.infer<typeof registerOrganizationSchema>;
+export type CompleteOnboardingStepInput = z.infer<typeof completeOnboardingStepSchema>;
+export type InviteUsersInput = z.infer<typeof inviteUsersSchema>;
+export type InventoryExitInput = z.infer<typeof inventoryExitSchema>;
+export type InventoryQueryInput = z.infer<typeof inventoryQuerySchema>;
+export type WhatsappWebhookInput = z.infer<typeof whatsappWebhookSchema>;
+export type SendTreatmentReminderInput = z.infer<typeof sendTreatmentReminderSchema>;
+export type PacienteTreatmentInput = z.infer<typeof pacienteTreatmentSchema>;
+export type HuliPatientIdInput = z.infer<typeof huliPatientIdSchema>;
+export type HuliAppointmentIdInput = z.infer<typeof huliAppointmentIdSchema>;
+export type HuliRecordIdInput = z.infer<typeof huliRecordIdSchema>;
+export type HuliPatientsQueryInput = z.infer<typeof huliPatientsQuerySchema>;
+export type HuliAppointmentsQueryInput = z.infer<typeof huliAppointmentsQuerySchema>;
+export type HuliMedicalRecordsQueryInput = z.infer<typeof huliMedicalRecordsQuerySchema>;
+export type CreateHuliPatientInput = z.infer<typeof createHuliPatientSchema>; 
