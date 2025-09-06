@@ -47,7 +47,9 @@ export default function Pacientes() {
   const loadPacientes = async () => {
     try {
       const data = await getPacientes();
-      setPacientes(data);
+      console.log('🔍 DEBUG - Datos recibidos de getPacientes:', data);
+      // Asegurar que siempre sea un array
+      setPacientes(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error cargando pacientes:", error);
     }
@@ -155,7 +157,7 @@ export default function Pacientes() {
             </tr>
           </thead>
           <tbody>
-            {pacientes.map((paciente) => (
+            {Array.isArray(pacientes) && pacientes.map((paciente) => (
               <tr key={paciente.id} className="hover:bg-gray-50 transition">
                 <td className="border px-8 py-5 text-gray-900 text-lg">{paciente.id}</td>
                 <td className="border px-8 py-5 text-gray-900 text-lg">{paciente.nombre}</td>

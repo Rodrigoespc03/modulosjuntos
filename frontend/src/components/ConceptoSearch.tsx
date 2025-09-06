@@ -28,7 +28,7 @@ export default function ConceptoSearch({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Mostrar el nombre del concepto seleccionado si value existe
-  const selectedConcepto = conceptos.find(c => c.id === value);
+  const selectedConcepto = Array.isArray(conceptos) ? conceptos.find(c => c.id === value) : null;
   const displayValue = selectedConcepto ? selectedConcepto.nombre : searchTerm;
 
   useEffect(() => {
@@ -37,11 +37,11 @@ export default function ConceptoSearch({
       setIsOpen(false);
       return;
     }
-    const filtered = conceptos.filter(concepto => {
+    const filtered = Array.isArray(conceptos) ? conceptos.filter(concepto => {
       const nombre = concepto.nombre.toLowerCase();
       const search = searchTerm.toLowerCase();
       return nombre.includes(search);
-    });
+    }) : [];
     setFilteredConceptos(filtered.slice(0, 8));
     setIsOpen(filtered.length > 0);
     setSelectedIndex(-1);

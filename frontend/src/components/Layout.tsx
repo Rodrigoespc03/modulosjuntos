@@ -29,6 +29,9 @@ export default function Layout({ children, onLogout }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const { modulosDisponibles, loading, organizacion } = usePermisos();
+  
+  // Asegurar que modulosDisponibles sea siempre un array válido
+  const modulosSeguros = Array.isArray(modulosDisponibles) ? modulosDisponibles : [];
 
   // Definir la navegación con verificación de módulos
   const getNavigation = () => {
@@ -86,7 +89,7 @@ export default function Layout({ children, onLogout }: LayoutProps) {
     // Filtrar navegación según módulos disponibles
     return navigation.filter(item => {
       if (item.modulo === null) return true; // Módulos públicos siempre visibles
-      return modulosDisponibles.includes(item.modulo);
+      return modulosSeguros.includes(item.modulo);
     });
   };
 

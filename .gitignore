@@ -53,4 +53,23 @@ temp/
 # Excluir archivos de prueba y desarrollo
 *.test.js
 *.spec.js
-test-results/ 
+test-results/
+
+# Archivos específicos del proyecto
+backend/check-*.js
+backend/test-*.js
+backend/add-*.js
+backend/fix-*.js
+backend/list-*.js
+backend/backups/
+backend/reports/
+backend/evidencias/
+
+# Archivos de configuración sensibles
+backend/.env
+.env
+
+# Archivos temporales de desarrollo
+*.tmp
+*.temp
+temp-* 

@@ -59,7 +59,8 @@ export async function getPacientes() {
     const res = await axios.get(PACIENTES_URL, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    return res.data;
+    // El backend devuelve {success: true, data: [...]}, necesitamos solo el array
+    return res.data.data || res.data;
   } catch (error: any) {
     if (error.response?.status === 401 || error.response?.status === 403) {
       throw new Error('Sesión expirada. Por favor, inicia sesión nuevamente.');
@@ -72,13 +73,14 @@ export async function getUsuarios() {
   const token = localStorage.getItem('token');
   if (!token) {
     throw new Error('No hay token de autenticación. Por favor, inicia sesión.');
-  }
+    }
   
   try {
     const res = await axios.get(USUARIOS_URL, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    return res.data;
+    // El backend devuelve {success: true, data: [...]}, necesitamos solo el array
+    return res.data.data || res.data;
   } catch (error: any) {
     if (error.response?.status === 401 || error.response?.status === 403) {
       throw new Error('Sesión expirada. Por favor, inicia sesión nuevamente.');
@@ -97,7 +99,8 @@ export async function getConsultorios() {
     const res = await axios.get(CONSULTORIOS_URL, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    return res.data;
+    // El backend devuelve {success: true, data: [...]}, necesitamos solo el array
+    return res.data.data || res.data;
   } catch (error: any) {
     if (error.response?.status === 401 || error.response?.status === 403) {
       throw new Error('Sesión expirada. Por favor, inicia sesión nuevamente.');
@@ -116,7 +119,8 @@ export async function getCobros() {
     const res = await axios.get(COBROS_URL, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    return res.data;
+    // El backend devuelve {success: true, data: [...]}, necesitamos solo el array
+    return res.data.data || res.data;
   } catch (error: any) {
     if (error.response?.status === 401 || error.response?.status === 403) {
       throw new Error('Sesión expirada. Por favor, inicia sesión nuevamente.');

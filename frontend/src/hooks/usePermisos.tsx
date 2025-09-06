@@ -81,18 +81,24 @@ export const PermisosProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       const response: PermisosResponse = await obtenerMisPermisos();
       
-      setPermisos(response.permisos);
-      setModulosDisponibles(response.modulosDisponibles);
-      setRol(response.rol);
-      setOrganizacion(response.organizacion || null);
+      // Extraer datos de la respuesta del backend
+      const data = response.data || response;
+      
+      setPermisos(data.permisos);
+      setModulosDisponibles(data.modulosDisponibles);
+      setRol(data.rol);
+      setOrganizacion(data.organizacion || null);
     } catch (err: any) {
       console.error('Error cargando permisos:', err);
       setError(err.message || 'Error cargando permisos');
       
       // Si hay error de autenticación, redirigir al login
-      if (err.message?.includes('autenticación') || err.message?.includes('401')) {
+      if (err.message?.includes('autenticación') || err.message?.includes('401') || err.message?.includes('Token inválido')) {
+        console.log('🔍 DEBUG - Error de autenticación detectado, removiendo token');
         localStorage.removeItem('token');
         window.location.href = '/';
+      } else {
+        console.log('🔍 DEBUG - Error en permisos (no de autenticación):', err.message);
       }
     } finally {
       setLoading(false);

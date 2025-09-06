@@ -38,7 +38,7 @@ export class HistorialService {
       // Usar la fecha actual sin ajustes manuales
       const fechaLocal = new Date();
       
-      const registroCreado = await prisma.historialCobro.create({
+      const registroCreado = await prisma.historial_cobros.create({
         data: {
           cobro_id: data.entidad_id,
           usuario_id: data.usuario_id,
@@ -249,17 +249,15 @@ export class HistorialService {
       // Aplicar filtro de organización si se proporciona
       if (filtros?.organizacionId) {
         console.log('🔍 DEBUG - Aplicando filtro de organización:', filtros.organizacionId);
-        where.cobro = {
-          usuario: {
-            organizacion_id: filtros.organizacionId
-          }
+        where.usuarios = {
+          organizacion_id: filtros.organizacionId
         };
       }
 
-      const historial = await prisma.historialCobro.findMany({
+      const historial = await prisma.historial_cobros.findMany({
         where,
         include: {
-          usuario: {
+          usuarios: {
             select: {
               id: true,
               nombre: true,
@@ -267,9 +265,9 @@ export class HistorialService {
               email: true
             }
           },
-          cobro: {
+          cobros: {
             include: {
-              paciente: {
+              pacientes: {
                 select: {
                   id: true,
                   nombre: true,
@@ -323,16 +321,16 @@ export class HistorialService {
         cambiosPorDia
       ] = await Promise.all([
         // Total de registros
-        prisma.historialCobro.count(),
+        prisma.historial_cobros.count(),
         
         // Cambios por tipo
-        prisma.historialCobro.groupBy({
+        prisma.historial_cobros.groupBy({
           by: ['tipo_cambio'],
           _count: { tipo_cambio: true }
         }),
         
         // Cambios por usuario (top 10)
-        prisma.historialCobro.groupBy({
+        prisma.historial_cobros.groupBy({
           by: ['usuario_id'],
           _count: { usuario_id: true },
           orderBy: { _count: { usuario_id: 'desc' } },
@@ -340,7 +338,7 @@ export class HistorialService {
         }),
         
         // Cambios por día (últimos 30 días) - Versión simplificada
-        prisma.historialCobro.findMany({
+        prisma.historial_cobros.findMany({
           where: {
             created_at: {
               gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // 30 días atrás

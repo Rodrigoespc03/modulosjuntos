@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = "postgresql://neondb_owner:npg_gdL38fTWHYsa@ep-jolly-mud-a8o9mqgz-pooler.eastus2.azure.neon.tech/neondb?sslmode=require&channel_binding=require"
 }
 
 // ========================================
@@ -61,6 +61,7 @@ model usuarios {
   whatsapp_config          whatsapp_config?
   whatsapp_messages        whatsapp_messages[]
   whatsapp_reminders       whatsapp_reminders[]
+  email_messages           email_messages[]
   whatsapp_templates       whatsapp_templates[]
 
   @@unique([email, organizacion_id], map: "unique_usuario_email_organizacion")
@@ -90,6 +91,7 @@ model pacientes {
   cobros              cobros[]
   organizaciones      organizaciones      @relation(fields: [organizacion_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_pacientes_organizacion")
   whatsapp_messages   whatsapp_messages[]
+  email_messages      email_messages[]
 
   @@unique([email, organizacion_id], map: "unique_paciente_email_organizacion")
   @@index([email, organizacion_id], map: "idx_pacientes_email_organizacion")
@@ -139,6 +141,7 @@ model cobros {
   usuarios           usuarios             @relation(fields: [usuario_id], references: [id])
   historial_cobros   historial_cobros[]
   metodos_pago_cobro metodos_pago_cobro[]
+  email_messages     email_messages[]
 
   @@index([estado], map: "idx_cobros_estado")
   @@index([fecha_cobro(sort: Desc)], map: "idx_cobros_fecha_cobro")
@@ -272,6 +275,7 @@ model citas {
   usuarios           usuarios             @relation(fields: [usuario_id], references: [id])
   whatsapp_messages  whatsapp_messages[]
   whatsapp_reminders whatsapp_reminders[]
+  email_messages     email_messages[]
 
   @@index([consultorio_id], map: "idx_citas_consultorio_id")
   @@index([fecha_fin], map: "idx_citas_fecha_fin")
@@ -579,6 +583,32 @@ model whatsapp_messages {
   usuarios            usuarios              @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
 }
 
+model email_messages {
+  id                  String                @id @default(uuid())
+  usuario_id          String
+  paciente_id         String?
+  cita_id             String?
+  cobro_id            String?
+  template_name       String?
+  message_type        String
+  content             Json
+  email_address       String
+  status              EmailMessageStatus
+  email_message_id    String?
+  error_message       String?
+  sent_at             DateTime?
+  delivered_at        DateTime?
+  read_at             DateTime?
+  created_at          DateTime              @default(now())
+  updated_at          DateTime
+  
+  // Relaciones
+  citas               citas?                @relation(fields: [cita_id], references: [id])
+  pacientes           pacientes?            @relation(fields: [paciente_id], references: [id])
+  usuarios            usuarios              @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+  cobros              cobros?               @relation(fields: [cobro_id], references: [id])
+}
+
 model whatsapp_reminders {
   id             String    @id @default(uuid())
   usuario_id     String
@@ -673,6 +703,14 @@ enum UserRole {
 }
 
 enum WhatsAppMessageStatus {
+  PENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+enum EmailMessageStatus {
   PENDING
   SENT
   DELIVERED

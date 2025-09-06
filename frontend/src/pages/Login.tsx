@@ -13,16 +13,24 @@ export default function Login() {
     setError('');
 
     try {
-      const response = await axios.post('/api/login', {
+      const response = await axios.post('http://localhost:3002/api/login', {
         email,
         password
+      }, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
 
       const { token, user } = response.data;
       
+      console.log('🔍 DEBUG - Login exitoso:', { token: token ? token.substring(0, 20) + '...' : 'NO TOKEN', user });
+      
       // Guardar token y usuario en localStorage
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
+      
+      console.log('🔍 DEBUG - Token guardado en localStorage:', localStorage.getItem('token') ? localStorage.getItem('token')?.substring(0, 20) + '...' : 'NO TOKEN');
       
       // Redirigir al dashboard
       window.location.href = '/';

@@ -142,7 +142,7 @@ export const performanceMonitor = (req: Request, res: Response, next: NextFuncti
     const endMemory = process.memoryUsage();
     
     const metric: EndpointMetrics = {
-      endpoint: req.route?.path || req.path,
+      endpoint: req.route?.path || req.path || req.url || 'unknown',
       method: req.method,
       responseTime: endTime - startTime,
       statusCode: res.statusCode,

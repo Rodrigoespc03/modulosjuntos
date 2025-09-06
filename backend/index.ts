@@ -1,148 +1,290 @@
-import express, { Application, Request, Response } from 'express';
+import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import session from 'express-session';
-import { errorHandler } from './middleware/errorHandler';
-import { performanceMonitor, logPerformanceMetrics } from './middleware/performanceMonitor';
-import { compressAPI } from './middleware/compression';
-import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import { PrismaClient } from '@prisma/client';
+
 dotenv.config();
 
 console.log("Iniciando backend...");
 
-process.on('uncaughtException', function (err: Error) {
-  console.error('Excepción no capturada:', err);
-});
-
-process.on('unhandledRejection', function (err: any) {
-  console.error('Promesa no manejada:', err);
-});
-
 const app: Application = express();
-const SCALING_VALIDATION_MODE = process.env.SCALING_VALIDATION_MODE === '1';
+const prisma = new PrismaClient();
 
-// CORS seguro (ajusta origins según tu necesidad)
+// CORS
 app.use(cors({
   origin: [
-    'http://localhost:5173', // frontend Vite
-    'http://localhost:3000', // posible otro frontend
-    'http://localhost:3001', // posible otro frontend
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:3000',
+    'http://localhost:3001',
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// Permitir preflight OPTIONS para todas las rutas
-app.options('*', cors());
-
 app.use(express.json());
 
-// Middleware de monitoreo de performance
-app.use(performanceMonitor);
-
-// Middleware de compresión para optimizar respuestas
-app.use(compressAPI);
-
-// Configurar middleware de sesiones
-app.use(session({
-  secret: process.env.JWT_SECRET || 'supersecreto123',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: false, // En desarrollo
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 24 horas
-  }
-}));
+// Middleware de logging simplificado
+app.use((req: Request, res: Response, next: NextFunction) => {
+  console.log(`${req.method} ${req.url}`);
+  next();
+});
 
 // Ruta de prueba
 app.get('/', (req: Request, res: Response) => {
   res.send('API de ProCura Cobros funcionando');
 });
 
-// Health checks (para NGINX y validadores)
+// Health check
 app.get('/health', (_req: Request, res: Response) => {
   res.status(200).send('healthy');
 });
 
-app.get('/api/health', (_req: Request, res: Response) => {
-  res.status(200).json({ status: 'ok' });
-});
+console.log('🔄 Cargando rutas...');
 
-if (!SCALING_VALIDATION_MODE) {
-  // Cargar rutas completas solo fuera de modo validación
-  // Se usan requires para evitar que TypeScript verifique módulos no necesarios en validación
-  // y prevenir fallos por tipados de partes no relacionadas a 4.5
-  const pacienteRoutes = require('./routes/pacienteRoutes').default;
-  const cobroRoutes = require('./routes/cobroRoutes').default;
-  const usuarioRoutes = require('./routes/usuarioRoutes').default;
-  const consultorioRoutes = require('./routes/consultorioRoutes').default;
-  const precioConsultorioRoutes = require('./routes/precioConsultorioRoutes').default;
-  const cobroConceptoRoutes = require('./routes/cobroConceptoRoutes').default;
-  const historialCobroRoutes = require('./routes/historialCobroRoutes').default;
-  const historialRoutes = require('./routes/historialRoutes').default;
-  const servicioRoutes = require('./routes/servicioRoutes').default;
-  const permisosRoutes = require('./routes/permisosRoutes').default;
-  const organizacionRoutes = require('./routes/organizacionRoutes').default;
+try {
+  // Cargar rutas esenciales
   const authRoutes = require('./routes/authRoutes').default;
-  const inventoryRoutes = require('./routes/inventoryRoutes').inventoryRoutes;
-  const citaRoutes = require('./routes/citaRoutes').default;
-  const disponibilidadMedicoRoutes = require('./routes/disponibilidadMedicoRoutes').default;
-  const bloqueoMedicoRoutes = require('./routes/bloqueoMedicoRoutes').default;
-  const googleAuthRoutes = require('./routes/googleAuthRoutes').default;
-  const whatsappRoutes = require('./routes/whatsappRoutes').default;
   const facturacionRoutes = require('./routes/facturacionRoutes').default;
-  const huliRoutes = require('./routes/huliRoutes').default;
-  const onboardingRoutes = require('./routes/onboardingRoutes').default;
-  const metricsRoutes = require('./routes/metricsRoutes').default;
-  const gdprRoutes = require('./routes/gdprRoutes').default;
-
-  app.use('/api/pacientes', pacienteRoutes);
-  app.use('/api/cobros', cobroRoutes);
-  app.use('/api/usuarios', usuarioRoutes);
-  app.use('/api/consultorios', consultorioRoutes);
-  app.use('/api/precios-consultorio', precioConsultorioRoutes);
-  app.use('/api/cobro-conceptos', cobroConceptoRoutes);
-  app.use('/api/historial-cobros', historialCobroRoutes);
-  app.use('/api/historial', historialRoutes);
-  app.use('/api/servicios', servicioRoutes);
-  app.use('/api/permisos', permisosRoutes);
-  app.use('/api/organizaciones', organizacionRoutes);
+  const whatsappRoutes = require('./routes/whatsappRoutes').default;
+  const historialRoutes = require('./routes/historialRoutes').default;
+  const notificationRoutes = require('./routes/notificationRoutes').default;
+  
+  console.log('✅ Rutas cargadas correctamente');
+  
+  // Registrar authRoutes
   app.use('/api', authRoutes);
-  app.use('/api', inventoryRoutes);
-  app.use('/api/citas', citaRoutes);
-  app.use('/api/disponibilidad-medico', disponibilidadMedicoRoutes);
-  app.use('/api/bloqueo-medico', bloqueoMedicoRoutes);
-  app.use('/api', googleAuthRoutes);
-  app.use('/api/whatsapp', whatsappRoutes);
+  console.log('   ✅ Ruta /api registrada con authRoutes');
+  
+  // Registrar rutas de facturación
   app.use('/api/facturacion', facturacionRoutes);
-  app.use('/api/huli', huliRoutes);
-  app.use('/api/onboarding', onboardingRoutes);
-  app.use('/api/metrics', metricsRoutes);
-  app.use('/api/gdpr', gdprRoutes);
-} else {
-  console.log('🧪 SCALING_VALIDATION_MODE activo: cargando rutas mínimas');
+  console.log('   ✅ Ruta /api/facturacion registrada con facturacionRoutes');
+  
+  // Registrar rutas de WhatsApp
+  app.use('/api/whatsapp', whatsappRoutes);
+  console.log('   ✅ Ruta /api/whatsapp registrada con whatsappRoutes');
+  
+  // Registrar rutas de historial
+  app.use('/api/historial', historialRoutes);
+  console.log('   ✅ Ruta /api/historial registrada con historialRoutes');
+  
+  // Registrar rutas de notificaciones
+  app.use('/api/notifications', notificationRoutes);
+  console.log('   ✅ Ruta /api/notifications registrada con notificationRoutes');
+  
+  // Agregar rutas básicas para testing
+  app.get('/api/test', (req: Request, res: Response) => {
+    res.json({ message: 'API funcionando correctamente' });
+  });
+  
+  app.get('/api/status', (req: Request, res: Response) => {
+    res.json({ 
+      status: 'running',
+      timestamp: new Date().toISOString(),
+      routes: ['/api/login', '/api/me', '/api/logout', '/api/test', '/api/status', '/api/facturacion', '/api/whatsapp', '/api/historial']
+    });
+  });
+  
+  // RUTAS BÁSICAS PARA EL FRONTEND
+  // GET /api/pacientes - Lista de pacientes
+  app.get('/api/pacientes', async (req: Request, res: Response) => {
+    try {
+      const pacientes = await prisma.$queryRaw`
+        SELECT id, nombre, apellido, email, telefono, fecha_nacimiento, genero, direccion, documento_identidad, created_at, organizacion_id
+        FROM pacientes 
+        ORDER BY nombre
+      `;
+      res.json({ success: true, data: pacientes });
+    } catch (error) {
+      console.error('Error en /api/pacientes:', error);
+      res.status(500).json({ error: 'Error obteniendo pacientes', details: error instanceof Error ? error.message : 'Error desconocido' });
+    }
+  });
+
+  // POST /api/pacientes - Crear nuevo paciente
+  app.post('/api/pacientes', async (req: Request, res: Response) => {
+    try {
+      const { nombre, apellido, email, telefono, fecha_nacimiento, genero, direccion, documento_identidad } = req.body;
+      
+      // Validar campos requeridos
+      if (!nombre || !apellido || !genero) {
+        return res.status(400).json({ 
+          error: 'Campos requeridos faltantes', 
+          details: 'Nombre, apellido y género son obligatorios' 
+        });
+      }
+
+      // Crear el paciente
+      const nuevoPaciente = await prisma.pacientes.create({
+        data: {
+          nombre,
+          apellido,
+          email: email || null,
+          telefono: telefono || null,
+          fecha_nacimiento: fecha_nacimiento ? new Date(fecha_nacimiento) : null,
+          genero,
+          direccion: direccion || null,
+          documento_identidad: documento_identidad || null,
+          organizacion_id: '550e8400-e29b-41d4-a716-446655440000' // Usar la primera organización disponible
+        }
+      });
+
+      console.log('✅ Paciente creado:', nuevoPaciente);
+      res.status(201).json({ 
+        success: true, 
+        data: nuevoPaciente,
+        message: 'Paciente creado exitosamente' 
+      });
+    } catch (error) {
+      console.error('Error creando paciente:', error);
+      res.status(500).json({ 
+        error: 'Error creando paciente', 
+        details: error instanceof Error ? error.message : 'Error desconocido' 
+      });
+    }
+  });
+  
+  // GET /api/usuarios - Lista de usuarios
+  app.get('/api/usuarios', async (req: Request, res: Response) => {
+    try {
+      const usuarios = await prisma.$queryRaw`
+        SELECT id, nombre, apellido, email, telefono, rol, consultorio_id, organizacion_id, created_at
+        FROM usuarios 
+        ORDER BY nombre
+      `;
+      res.json({ success: true, data: usuarios });
+    } catch (error) {
+      console.error('Error en /api/usuarios:', error);
+      res.status(500).json({ error: 'Error obteniendo usuarios', details: error instanceof Error ? error.message : 'Error desconocido' });
+    }
+  });
+  
+  // GET /api/consultorios - Lista de consultorios
+  app.get('/api/consultorios', async (req: Request, res: Response) => {
+    try {
+      const consultorios = await prisma.$queryRaw`
+        SELECT id, nombre, direccion, organizacion_id, created_at
+        FROM consultorios 
+        ORDER BY nombre
+      `;
+      res.json({ success: true, data: consultorios });
+    } catch (error) {
+      console.error('Error en /api/consultorios:', error);
+      res.status(500).json({ error: 'Error obteniendo consultorios', details: error instanceof Error ? error.message : 'Error desconocido' });
+    }
+  });
+  
+  // GET /api/cobros - Lista de cobros
+  app.get('/api/cobros', async (req: Request, res: Response) => {
+    try {
+      const cobros = await prisma.$queryRaw`
+        SELECT id, paciente_id, usuario_id, monto_total, fecha_cobro, estado, notas, metodo_pago, created_at
+        FROM cobros 
+        ORDER BY fecha_cobro DESC
+      `;
+      res.json({ success: true, data: cobros });
+    } catch (error) {
+      console.error('Error en /api/cobros:', error);
+      res.status(500).json({ error: 'Error obteniendo cobros', details: error instanceof Error ? error.message : 'Error desconocido' });
+    }
+  });
+  
+  // GET /api/servicios - Lista de servicios
+  app.get('/api/servicios', async (req: Request, res: Response) => {
+    try {
+      const servicios = await prisma.$queryRaw`
+        SELECT id, nombre, descripcion, precio_base, organizacion_id, created_at
+        FROM servicios 
+        ORDER BY nombre
+      `;
+      res.json({ success: true, data: servicios });
+    } catch (error) {
+      console.error('Error en /api/servicios:', error);
+      res.status(500).json({ error: 'Error obteniendo servicios', details: error instanceof Error ? error.message : 'Error desconocido' });
+    }
+  });
+  
+  // GET /api/permisos/mis-permisos - Permisos del usuario actual
+  app.get('/api/permisos/mis-permisos', async (req: Request, res: Response) => {
+    try {
+      // Por ahora devolvemos permisos básicos y módulos disponibles
+      const permisos = {
+        puede_editar_cobros: true,
+        puede_eliminar_cobros: true,
+        puede_gestionar_usuarios: true,
+        puede_ver_historial: true
+      };
+      
+      // Módulos disponibles para el usuario
+      const modulosDisponibles = [
+        'cobros',
+        'pacientes', 
+        'usuarios',
+        'citas',
+        'inventario',
+        'facturacion',
+        'historial'
+      ];
+      
+      // Rol del usuario (por defecto admin)
+      const rol = 'ADMIN';
+      
+      // Información de la organización (por defecto)
+      const organizacion = {
+        nombre: 'ProCura',
+        email: 'admin@organizacion.com',
+        telefono: '+1234567890'
+      };
+      
+      res.json({ 
+        success: true, 
+        data: {
+          permisos,
+          modulosDisponibles,
+          rol,
+          organizacion
+        }
+      });
+    } catch (error) {
+      console.error('Error en /api/permisos/mis-permisos:', error);
+      res.status(500).json({ error: 'Error obteniendo permisos', details: error instanceof Error ? error.message : 'Error desconocido' });
+    }
+  });
+  
+  console.log('   ✅ Rutas básicas del frontend agregadas');
+  console.log('   📝 Rutas disponibles: /api/pacientes, /api/usuarios, /api/consultorios, /api/cobros, /api/servicios, /api/permisos/mis-permisos, /api/historial');
+  
+} catch (error) {
+  console.error('❌ Error cargando rutas:', error);
 }
 
-// Middleware de manejo de errores global mejorado
-app.use(errorHandler);
+// Middleware de manejo de errores
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  console.error(`🚨 ERROR en ${req.method} ${req.url}:`, err.message);
+  
+  if (!res.headersSent) {
+    res.status(500).json({ 
+      error: 'Internal server error', 
+      message: 'Error interno del servidor'
+    });
+  }
+});
+
+// Ruta 404 para rutas no encontradas
+app.use('*', (req: Request, res: Response) => {
+  res.status(404).json({ 
+    error: 'Not Found', 
+    message: `Ruta ${req.originalUrl} no encontrada` 
+  });
+});
 
 const PORT: number = parseInt(process.env.PORT || '3002', 10);
 
-if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, () => {
-    console.log(`Servidor corriendo en http://localhost:${PORT}`);
-    
-    // Logging periódico de métricas cada 10 minutos
-    if (process.env.ENABLE_METRICS_LOGGING !== 'false') {
-      setInterval(() => {
-        logPerformanceMetrics();
-      }, 10 * 60 * 1000); // 10 minutos
-      
-      console.log('📊 Monitoreo de performance activado - métricas cada 10 minutos');
-    }
-  });
-}
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+  console.log('✅ Sistema básico cargado con rutas del frontend');
+  console.log('📝 Rutas disponibles: /api/pacientes, /api/usuarios, /api/consultorios, /api/cobros, /api/servicios, /api/permisos/mis-permisos, /api/historial');
+});
 
 export default app; 

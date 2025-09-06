@@ -137,20 +137,50 @@ export default function Historial() {
   const [vista, setVista] = useState<'historial' | 'estadisticas'>('historial');
 
   useEffect(() => {
-    cargarHistorial();
-    cargarEstadisticas();
-  }, []);
+    // Solo cargar datos cuando los permisos estén cargados y el usuario tenga acceso
+    // El token se verificará dentro de las funciones para evitar race conditions
+    if (!permisosLoading && permisos && permisos.puede_ver_historial) {
+      console.log('🔍 DEBUG - Condiciones cumplidas para cargar historial:', {
+        permisosLoading,
+        tienePermisos: !!permisos,
+        puedeVerHistorial: permisos?.puede_ver_historial
+      });
+      cargarHistorial();
+      cargarEstadisticas();
+    } else {
+      console.log('🔍 DEBUG - Condiciones NO cumplidas para cargar historial:', {
+        permisosLoading,
+        tienePermisos: !!permisos,
+        puedeVerHistorial: permisos?.puede_ver_historial
+      });
+    }
+  }, [permisos, permisosLoading]);
 
   // Efecto para aplicar filtros automáticamente cuando cambien
   useEffect(() => {
-    if (filtros.fechaDesde || filtros.fechaHasta || filtros.tipoCambio || filtros.busqueda) {
+    // Solo aplicar filtros si los permisos están cargados y el usuario tiene acceso
+    // El token se verificará dentro de la función para evitar race conditions
+    if (!permisosLoading && permisos && permisos.puede_ver_historial &&
+        (filtros.fechaDesde || filtros.fechaHasta || filtros.tipoCambio || filtros.busqueda)) {
       cargarHistorial();
     }
-  }, [filtros.fechaDesde, filtros.fechaHasta, filtros.tipoCambio]);
+  }, [filtros.fechaDesde, filtros.fechaHasta, filtros.tipoCambio, filtros.busqueda, permisos, permisosLoading]);
 
   const cargarHistorial = async () => {
     try {
       console.log('🔍 DEBUG - cargarHistorial iniciado');
+      
+      // Verificar que el token esté disponible antes de hacer la petición
+      const token = localStorage.getItem('token');
+      console.log('🔍 DEBUG - Token verificado en cargarHistorial:', token ? token.substring(0, 20) + '...' : 'NO TOKEN');
+      
+      if (!token) {
+        console.log('🔍 DEBUG - No hay token disponible, cancelando carga del historial');
+        setError('No hay token de autenticación. Por favor, inicia sesión nuevamente.');
+        setLoading(false);
+        return;
+      }
+      
       setLoading(true);
       setError(null);
       const data = await getHistorialGeneral({
@@ -177,6 +207,15 @@ export default function Historial() {
 
   const cargarEstadisticas = async () => {
     try {
+      // Verificar que el token esté disponible antes de hacer la petición
+      const token = localStorage.getItem('token');
+      console.log('🔍 DEBUG - Token verificado en cargarEstadisticas:', token ? token.substring(0, 20) + '...' : 'NO TOKEN');
+      
+      if (!token) {
+        console.log('🔍 DEBUG - No hay token disponible, cancelando carga de estadísticas');
+        return;
+      }
+      
       const data = await getHistorialEstadisticas();
       setEstadisticas(data);
     } catch (error: any) {
@@ -613,15 +652,15 @@ export default function Historial() {
                         <div className="mb-3">
                           <div className="flex items-center gap-2">
                             <button
-                              onClick={() => toggleUsuarioExpandido(item.usuario.id)}
+                              onClick={() => toggleUsuarioExpandido(item.usuarios.id)}
                               className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center hover:bg-blue-200 transition-colors cursor-pointer relative"
                               title="Ver información del usuario"
                             >
                               <span className="text-sm font-medium text-blue-600">
-                                {item.usuario.nombre.charAt(0)}{item.usuario.apellido.charAt(0)}
+                                {item.usuarios.nombre.charAt(0)}{item.usuarios.apellido.charAt(0)}
                               </span>
                               <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-blue-500 rounded-full flex items-center justify-center">
-                                {usuariosExpandidos.has(item.usuario.id) ? (
+                                {usuariosExpandidos.has(item.usuarios.id) ? (
                                   <span className="text-white text-xs font-bold">−</span>
                                 ) : (
                                   <span className="text-white text-xs font-bold">+</span>
@@ -630,33 +669,33 @@ export default function Historial() {
                             </button>
                             <div className="flex-1">
                               <span className="font-semibold text-gray-900">
-                                {item.usuario.nombre} {item.usuario.apellido}
+                                {item.usuarios.nombre} {item.usuarios.apellido}
                               </span>
                               <span className="text-sm text-gray-500 ml-2">
-                                {item.usuario.email}
+                                {item.usuarios.email}
                               </span>
                             </div>
                           </div>
                           
                           {/* Información expandida del usuario */}
-                          {usuariosExpandidos.has(item.usuario.id) && (
+                          {usuariosExpandidos.has(item.usuarios.id) && (
                             <div className="mt-2 ml-10 p-3 bg-blue-50 rounded-lg border border-blue-200">
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                                 <div>
                                   <span className="font-medium text-blue-800">ID:</span>
-                                  <span className="text-gray-700 ml-1">{item.usuario.id}</span>
+                                  <span className="text-gray-700 ml-1">{item.usuarios.id}</span>
                                 </div>
                                 <div>
                                   <span className="font-medium text-blue-800">Email:</span>
-                                  <span className="text-gray-700 ml-1">{item.usuario.email}</span>
+                                  <span className="text-gray-700 ml-1">{item.usuarios.email}</span>
                                 </div>
                                 <div>
                                   <span className="font-medium text-blue-800">Nombre:</span>
-                                  <span className="text-gray-700 ml-1">{item.usuario.nombre}</span>
+                                  <span className="text-gray-700 ml-1">{item.usuarios.nombre}</span>
                                 </div>
                                 <div>
                                   <span className="font-medium text-blue-800">Apellido:</span>
-                                  <span className="text-gray-700 ml-1">{item.usuario.apellido}</span>
+                                  <span className="text-gray-700 ml-1">{item.usuarios.apellido}</span>
                                 </div>
                               </div>
                             </div>
@@ -666,11 +705,11 @@ export default function Historial() {
                         {/* Descripción de la acción */}
                         <div className="mb-3">
                           <p className="text-gray-700">
-                            <span className="font-medium">{item.usuario.nombre}</span>{' '}
+                            <span className="font-medium">{item.usuarios.nombre}</span>{' '}
                             {getDescripcionAccion(item.tipo_cambio, item.detalles_despues)}
-                            {item.cobro && (
+                            {item.cobros && (
                               <span className="font-medium text-blue-600">
-                                {' '}para {item.cobro.paciente.nombre} {item.cobro.paciente.apellido}
+                                {' '}para {item.cobros.pacientes.nombre} {item.cobros.pacientes.apellido}
                               </span>
                             )}
                           </p>

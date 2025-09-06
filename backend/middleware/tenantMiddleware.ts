@@ -36,10 +36,10 @@ export async function authenticateMultiTenant(req: AuthenticatedRequest, res: Re
     
     try {
       // Obtener usuario con información de la organización y permisos
-      const usuario = await prisma.usuario.findUnique({
+      const usuario = await prisma.usuarios.findUnique({
         where: { id: decoded.id },
         include: { 
-          consultorio: true
+          consultorios: true
         }
       });
       

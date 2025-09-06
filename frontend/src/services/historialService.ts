@@ -11,6 +11,8 @@ export async function getHistorialGeneral(filtros?: {
   console.log('🔍 DEBUG - getHistorialGeneral llamado con filtros:', filtros);
   
   const token = localStorage.getItem('token');
+  console.log('🔍 DEBUG - Token obtenido del localStorage:', token ? token.substring(0, 20) + '...' : 'NO TOKEN');
+  
   if (!token) {
     throw new Error('No hay token de autenticación. Por favor, inicia sesión.');
   }
@@ -26,6 +28,17 @@ export async function getHistorialGeneral(filtros?: {
   const url = `${HISTORIAL_URL}/general?${params}`;
   console.log('🔍 DEBUG - URL de la petición:', url);
 
+  console.log('🔍 DEBUG - Headers de la petición:', {
+    'Authorization': `Bearer ${token.substring(0, 20)}...`,
+    'Content-Type': 'application/json'
+  });
+  
+  console.log('🔍 DEBUG - Realizando petición a:', url);
+  console.log('🔍 DEBUG - Headers completos:', {
+    'Authorization': `Bearer ${token.substring(0, 20)}...`,
+    'Content-Type': 'application/json'
+  });
+  
   const response = await fetch(url, {
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -56,7 +69,11 @@ export async function getHistorialGeneral(filtros?: {
 }
 
 export async function getHistorialEstadisticas() {
+  console.log('🔍 DEBUG - getHistorialEstadisticas llamado');
+  
   const token = localStorage.getItem('token');
+  console.log('🔍 DEBUG - Token obtenido del localStorage (estadísticas):', token ? token.substring(0, 20) + '...' : 'NO TOKEN');
+  
   if (!token) {
     throw new Error('No hay token de autenticación. Por favor, inicia sesión.');
   }

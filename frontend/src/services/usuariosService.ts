@@ -25,7 +25,9 @@ export async function getUsuarios() {
     const res = await axios.get(USUARIOS_URL, {
       headers: getAuthHeaders()
     });
-    return res.data;
+    console.log('🔍 DEBUG - Respuesta completa de getUsuarios:', res.data);
+    // El backend devuelve { success: true, data: usuarios }
+    return res.data.data || res.data;
   } catch (error: any) {
     handleAuthError(error);
   }

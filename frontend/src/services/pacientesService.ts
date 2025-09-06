@@ -25,7 +25,9 @@ export async function getPacientes() {
     const res = await axios.get(PACIENTES_URL, {
       headers: getAuthHeaders()
     });
-    return res.data;
+    console.log('🔍 DEBUG - Respuesta completa de getPacientes:', res.data);
+    // El backend devuelve { success: true, data: pacientes }
+    return res.data.data || res.data;
   } catch (error: any) {
     handleAuthError(error);
   }
@@ -37,12 +39,17 @@ export async function crearPaciente(paciente: {
   email?: string;
   telefono?: string;
   fecha_nacimiento?: string;
+  genero?: string;
+  direccion?: string;
+  documento_identidad?: string;
 }) {
   try {
     const res = await axios.post(PACIENTES_URL, paciente, {
       headers: getAuthHeaders()
     });
-    return res.data;
+    console.log('🔍 DEBUG - Respuesta completa de crearPaciente:', res.data);
+    // El backend devuelve { success: true, data: paciente, message: '...' }
+    return res.data.data || res.data;
   } catch (error: any) {
     handleAuthError(error);
   }

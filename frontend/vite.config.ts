@@ -11,8 +11,23 @@ export default defineConfig({
     },
   },
   server: {
+    port: 5173,
     proxy: {
-      '/api': 'http://localhost:3002',
+      '/api': {
+        target: 'http://localhost:3002',
+        changeOrigin: true,
+        secure: false,
+        configure: (proxy, options) => {
+          proxy.on('proxyReq', (proxyReq, req: any, res) => {
+            if (req.body) {
+              const bodyData = JSON.stringify(req.body);
+              proxyReq.setHeader('Content-Type', 'application/json');
+              proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
+              proxyReq.write(bodyData);
+            }
+          });
+        }
+      },
     },
   },
   assetsInclude: ['**/*.pdf'],

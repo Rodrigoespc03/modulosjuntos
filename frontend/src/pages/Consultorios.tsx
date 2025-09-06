@@ -36,7 +36,9 @@ export default function Consultorios() {
     try {
       const res = await fetch('/api/consultorios');
       const data = await res.json();
-      setConsultorios(data);
+      console.log('🔍 DEBUG - Respuesta completa de consultorios:', data);
+      // El backend devuelve { success: true, data: consultorios }
+      setConsultorios(data.data || data);
     } catch {
       alert('Error al cargar consultorios');
     } finally {
